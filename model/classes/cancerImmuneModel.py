@@ -46,7 +46,8 @@ class CancerImmuneModel:
         self.cancerCells_t1:  Set[Tuple[int, int]] = set()
         self.immuneCells_t1:  Set[Tuple[int, int]] = set()
     
-    def get_nCancerCells(self):
+    def get_nCancerCells(self) -> int:
+        """Returns the amount of cancer cells in the system"""
         return len(self.cancerCells)
 
     def seedCancer(self, nCells: int) -> None:
