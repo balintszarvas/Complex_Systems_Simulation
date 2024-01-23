@@ -90,16 +90,19 @@ class CancerImmuneModel:
         output = []
         row, col = cell
 
-        for vertical in [-1, 0, 1]:
-            for horizontal in [-1, 0, 1]:
+        for vertical in [-1, 0, 1]: 
+        # Loop over surrounding rows
+            for horizontal in [-1, 0, 1]: 
+            # Loop over surrounding collumns
                 if vertical == 0 and horizontal == 0 and not includeSelf:
-                    # Skip neighbor if its the same cell unless specifically included
+                # Skip neighbor if its the same cell unless specifically included
                     continue
 
                 neighborRow = row + vertical
                 neighborCol = col + horizontal
 
                 if periodic:
+                # If periodic boundary conditions are used, take the modulo of the coordinate and the dimensions
                     neighborRow = neighborRow % self.dim[0]
                     neighborCol = neighborCol % self.dim[1]
                 
@@ -159,28 +162,33 @@ class CancerImmuneModel:
                        and 2 if moving without killing a cancer cell.
         """
         if self.cancerLattice[cell[0], cell[1]] and random() <= self.pImmuneKill:
+        # If currently occupying a cell with a cancer cell, randomly kill it. If sucessful, stay, else continue
             self.cancerCells_t1.remove(cell)
             self.cancerLattice[cell[0], cell[1]] = EMPTY
 
             self.immuneCells_t1.add(cell)
             return 1
     
-        moveTargets = self._neighborlist(cell, True, lattice=self.immuneLattice)
+        moves = self._neighborlist(cell, True, lattice=self.immuneLattice)
 
-        if not moveTargets:
+        if not moves:
+        # If no possible moves are available, stay, else continue.
             self.immuneCells_t1.add(cell)
-            self.immuneLattice[cell[0], cell[1]] = TKILLER_CELL
             return 0
-        
-        self.immuneLattice[cell[0], cell[1]] = EMPTY
 
         moveIndex = 0
-        if len(moveTargets) > 1:
-            moveIndex = randint(0, len(moveTargets) - 1)
+        if len(moves) > 1:
+        # If more than 1 move is possible, pick a random option
+            moveIndex = randint(0, len(moves) - 1)
         
-        target = moveTargets[moveIndex]
-        self.immuneCells_t1.add(target)
+        target = moves[moveIndex]
+        
+        # Move cell from current location to target location
+        self.immuneLattice[cell[0], cell[1]] = EMPTY
         self.immuneLattice[target[0], target[1]] = TKILLER_CELL
+
+        self.immuneCells_t1.add(target) # Add target location to scheduler
+        
 
         return 1
 
