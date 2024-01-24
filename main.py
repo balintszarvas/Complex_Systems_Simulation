@@ -8,7 +8,7 @@ def main():
     model.seedCancer(1)
     for i in range(500): # Unhindered growth for cancer cell
         model.timestep()
-    model.seedImmune(round(200 * 200 / 100))
+    model.seedImmune(round(200 * 200 / 150))
 
     vis = Visualizer(model)
     vis.run()

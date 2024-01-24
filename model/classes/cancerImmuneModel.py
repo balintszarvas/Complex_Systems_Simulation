@@ -70,7 +70,7 @@ class CancerImmuneModel:
             col = randint(0, self.dim[1] - 1)
 
             self.immuneLattice[row, col] = TKILLER_CELL
-            self.immuneCells.add((row, col))
+            self.immuneCells_t1.add((row, col))        
 
     def _neighborlist(self, cell: Tuple[int, int], periodic=False, includeSelf=False, 
                       lattice: np.ndarray[int] = None, emptyOnly=True) -> List[Tuple[int, int]]:
@@ -150,6 +150,27 @@ class CancerImmuneModel:
         self.cancerCells_t1.add(newCell) # add new cell to schedule
         return 2
     
+    def multiTKiller(self, cell):
+        if self.propagateTKiller(cell) != 1:
+            return 0
+        
+        neighbors = self._neighborlist(cell, lattice=self.cancerLattice)
+
+        if not neighbors:
+            self.seedImmune(1)
+            return 1
+  
+        targetID = 0
+        if len(neighbors) > 1:
+            # Take only position if single available space
+            targetID = randint(0, len(neighbors) - 1)
+
+        newCell = neighbors[targetID]
+
+        self.immuneLattice[newCell[0], newCell[1]] = TKILLER_CELL # Create new cell on lattice 
+        self.immuneCells_t1.add(newCell) # add new cell to schedule
+        return 2
+    
     def propagateTKiller(self, cell) -> int:
         """
         Propagates a T-Killer immune cell. Moves TKILLER_CELL on immuneLattice and adds new position
@@ -190,16 +211,19 @@ class CancerImmuneModel:
         self.immuneCells_t1.add(target) # Add target location to scheduler
         
 
-        return 1
+        return 2
 
     def timestep(self):
         """
         Propagates the model by 1 step
         """ 
+
         for cell in self.cancerCells:
             self.propagateCancerCell(cell)
+            time += 1
         for cell in self.immuneCells:
-            self.propagateTKiller(cell)
+            self.multiTKiller(cell)
+
         
         self.cancerCells = self.cancerCells_t1
         self.cancerCells_t1 = set()
