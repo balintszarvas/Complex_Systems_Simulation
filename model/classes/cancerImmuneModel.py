@@ -64,8 +64,7 @@ class CancerImmuneModel:
             row = randint(0, self.dim[0] - 1)
             col = randint(0, self.dim[1] - 1)
 
-            self.cancerLattice[row, col] = CANCER_CELL
-            self.cancerCells_t1.add((row, col))
+            self._addCancer((row, col))
         
     def seedImmune(self, nCells: int) -> int:
         """
@@ -81,8 +80,7 @@ class CancerImmuneModel:
             col = randint(0, self.dim[1] - 1)
 
             if self.cancerLattice[row, col] == 0:
-                self.immuneLattice[row, col] = TKILLER_CELL
-                self.immuneCells.add((row, col))
+                self._addImmune((row, col))
                 cells += 1
         
         return cycles
@@ -142,7 +140,7 @@ class CancerImmuneModel:
         Returns (int): 0 if not able to multiply by chance, 1 if not able to multiply from overcrowding
                        and 2 if sucessfully multiplied
         """
-        self.cancerCells_t1.add(cell) # Add self to future scheduler
+        self._addCancer(cell)
 
         if random() > self.pCancerMult:
             # Stop if cell will not multiply
@@ -161,8 +159,7 @@ class CancerImmuneModel:
 
         newCell = neighbors[targetID]
 
-        self.cancerLattice[newCell[0], newCell[1]] = CANCER_CELL # Create new cell on lattice 
-        self.cancerCells_t1.add(newCell) # add new cell to schedule
+        self._addCancer(newCell)
         return 2
     
     def multiTKiller(self, cell):
@@ -182,8 +179,7 @@ class CancerImmuneModel:
 
         newCell = freeSpace[targetID]
 
-        self.immuneLattice[newCell[0], newCell[1]] = TKILLER_CELL # Create new cell on lattice 
-        self.immuneCells_t1.add(newCell) # add new cell to schedule
+        self._addImmune(newCell)
         return 2
     
     def deleteTkiller(self, cell):        
@@ -198,16 +194,14 @@ class CancerImmuneModel:
         # If there are no cancer cells but more than 2 T-Killer cells, the cell dies in the next timestep.
         if len(tkiller_neighbors) > 2:
             # Remove the current cell from the next timestep's set of T-Killer cells.
-            self.immuneLattice[cell[0], cell[1]] = EMPTY
-            self.immuneCells_t1.remove(cell)
+            self._removeImmune(cell)
             return 1
         
         if self.get_nCancerCells() != 0:
             return 0
         
         if random() <= 0.01:
-            self.immuneCells_t1.remove(cell)
-            self.immuneLattice[cell[0], cell[1]] = EMPTY
+            self._removeImmune
             return 1
         
         # if self.get_nImmuneCells() > (200*200/100)
@@ -225,19 +219,16 @@ class CancerImmuneModel:
         Returns (int): 0 if unable to move from overcrowding, 1 if succesfull in killing a cancer cell 
                        and 2 if moving without killing a cancer cell.
         """
+        self._addImmune(cell)
         if self.cancerLattice[cell[0], cell[1]] and random() <= self.pImmuneKill:
         # If currently occupying a cell with a cancer cell, randomly kill it. If sucessful, stay, else continue
-            self.cancerCells_t1.remove(cell)
-            self.cancerLattice[cell[0], cell[1]] = EMPTY
-
-            self.immuneCells_t1.add(cell)
+            self._removeCancer(cell)
             return 1
     
         moves = self._neighborlist(cell, True, lattice=self.immuneLattice)
 
         if not moves:
         # If no possible moves are available, stay, else continue.
-            self.immuneCells_t1.add(cell)
             return 0
 
         moveIndex = 0
@@ -248,15 +239,32 @@ class CancerImmuneModel:
         target = moves[moveIndex]
         
         # Move cell from current location to target location
-        self.immuneLattice[cell[0], cell[1]] = EMPTY
-        self.immuneLattice[target[0], target[1]] = TKILLER_CELL
-
-        self.immuneCells_t1.add(target) # Add target location to scheduler
+        self._removeImmune(cell)
+        self._addImmune(target)
         
         self.deleteTkiller(target)
-
         return 2
 
+    def _addCancer(self, cell: Tuple[int, int]):
+        self.cancerLattice[cell[0], cell[1]] = CANCER_CELL # Create new cell on lattice 
+        self.cancerCells_t1.add(cell) # add new cell to schedule
+
+    def _removeCancer(self, cell: Tuple[int, int]):
+        if cell not in self.cancerCells_t1:
+            print(f"Warning: Specified cancer cell {cell[0]},{cell[1]} not in t1 scheduler")
+        self.cancerLattice[cell[0], cell[1]] = EMPTY # Create new cell on lattice 
+        self.cancerCells_t1.remove(cell) # remove cell from scheduler
+
+    def _addImmune(self, cell: Tuple[int, int]):
+        self.immuneLattice[cell[0], cell[1]] = TKILLER_CELL
+        self.immuneCells_t1.add(cell)
+
+    def _removeImmune(self, cell: Tuple[int, int]):
+        if cell not in self.immuneCells_t1:
+            print(f"Warning: Specified cancer cell {cell[0]},{cell[1]} not in t1 scheduler")
+        self.immuneLattice[cell[0], cell[1]] = EMPTY
+        self.immuneCells_t1.remove(cell)
+    
     def timestep(self):
         """
         Propagates the model by 1 step
