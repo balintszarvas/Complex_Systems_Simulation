@@ -242,8 +242,7 @@ class CancerImmuneModel:
             return 0
         
         if random() <= 0.001:
-            self.immuneCells_t1.remove(cell)
-            self.immuneLattice[cell[0], cell[1]] = EMPTY
+            self._removeImmune(cell)
             return 1
         
         return 2
