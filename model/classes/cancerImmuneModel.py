@@ -201,6 +201,16 @@ class CancerImmuneModel:
             self.immuneLattice[cell[0], cell[1]] = EMPTY
             self.immuneCells_t1.remove(cell)
             return 1
+        
+        if self.get_nCancerCells() != 0:
+            return 0
+        
+        if random() <= 0.01:
+            self.immuneCells_t1.remove(cell)
+            self.immuneLattice[cell[0], cell[1]] = EMPTY
+            return 1
+        
+        # if self.get_nImmuneCells() > (200*200/100)
 
         return 2
     
@@ -243,20 +253,8 @@ class CancerImmuneModel:
 
         self.immuneCells_t1.add(target) # Add target location to scheduler
         
-        self.immuneDeath(target)
         self.deleteTkiller(target)
 
-        return 2
-    
-    def immuneDeath(self, cell):
-        if self.get_nCancerCells() != 0:
-            return 0
-        
-        if random() <= 0.001:
-            self.immuneCells_t1.remove(cell)
-            self.immuneLattice[cell[0], cell[1]] = EMPTY
-            return 1
-        
         return 2
 
     def timestep(self):
