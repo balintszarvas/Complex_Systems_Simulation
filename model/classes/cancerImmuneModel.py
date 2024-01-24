@@ -3,13 +3,12 @@ import numpy as np
 from collections import defaultdict
 import matplotlib.pyplot as plt
 import random
-
+from typing import List, Tuple, Set
 EMPTY       = 0
 CANCER_CELL = 1
 TKILLER_CELL = 2
 
 
-from typing import List, Tuple, Set
 
 class CancerImmuneModel:
     """2D spatial model of a tissue sample with cancerous growth
@@ -28,7 +27,7 @@ class CancerImmuneModel:
         cancerCells_t1 (Set[Tuple[int, int]]): Set of all cell coordinates containing cancer cells fopr next timestep
         immuneCells_t1 (Set[Tuple[int, int]]): List of all cell coordinates containing immune cells fopr next timestep
     """
-    def __init__(self, length: int, width: int, pImmuneKill = 1.0, pCancerMult = 0.05, pCancerEmergence=0.01) -> None:
+    def __init__(self, length: int, width: int, pImmuneKill = 1.0, pCancerMult = 0.5, pCancerEmergence=0.01, attack_range = 5) -> None:
         """
         initializer function
 
@@ -37,6 +36,7 @@ class CancerImmuneModel:
             width : Width of the lattice
         """
         self.time = 0
+        self.attack_range = attack_range
 
         self.dim =  (length, width)
 
@@ -56,18 +56,44 @@ class CancerImmuneModel:
 
         self.pCancerEmergence = pCancerEmergence
 
-    def chance_of_cancer_emergence(self):
+    def detect_clusters(self):
+        visited = set()
+        clusters = []
+
+        def dfs(cell):
+            if cell in visited or self.cancerLattice[cell[0], cell[1]] !=CANCER_CELL:
+                return 0
+            visited.add(cell)
+            size=1
+            for neighbor in self._neighborlist(cell):
+                size +=dfs(neighbor)
+            return size
+
+        for row in range(self.dim[0]):
+            for col in range(self.dim[1]):
+                if (row,col) not in visited and self.cancerLattice[row,col] == CANCER_CELL:
+                    clusters.append(dfs((row,col)))
+        return clusters
+
+    def plot_cluster_sizes(self):
+        counts, bin_edges = np.histogram(self.cluster_sizes,bins='auto',density=True)
+        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+        #loglog plot
+        plt.loglog(bin_centers, counts,marker='.', linestyle='none')
+        plt.xlabel('Log of Cluster Size')
+        plt.ylabel('Log of Frequency')
+        plt.title('Log-Log Plot of Cancer Cell Cluster Sizes')
+        plt.show()
+
+    def cancer_emergence(self):
         """
         Simulate the random emergence of new cancer cells by selecting a random empty cell
         """
-        if np.random.random() < self.pCancerEmergence:
-            # Create a list of all empty cells
-            empty_cells = [(row, col) for row in range(self.dim[0])
-                           for col in range(self.dim[1]) if self.cancerLattice[row, col] == EMPTY]
-
-            # If there are any empty cells, choose one at random for cancer emergence
+        if np.random.random() <self.pCancerEmergence:
+            empty_cells=[(row,col) for row in range(self.dim[0])
+                           for col in range(self.dim[1]) if self.cancerLattice[row,col] == EMPTY]
             if empty_cells:
-                new_cancer_cell = random.choice(empty_cells)
+                new_cancer_cell =random.choice(empty_cells)
                 self._addCancer(new_cancer_cell)
 
     def get_nCancerCells(self) -> int:
@@ -213,20 +239,12 @@ class CancerImmuneModel:
         if len(cancer_neighbors) > 0:
             return 0
 
-        # If there are no cancer cells but more than 2 T-Killer cells, the cell dies in the next timestep.
-        # if len(tkiller_neighbors) > 2:
-        #     # Remove the current cell from the next timestep's set of T-Killer cells.
-        #     self._removeImmune(cell)
-        #     return 1
-
         if self.get_nCancerCells() != 0:
             return 0
 
         if random.random() <= 0.01:
             self._removeImmune
             return 1
-
-        # if self.get_nImmuneCells() > (200*200/100)
 
         return 2
 
@@ -246,22 +264,20 @@ class CancerImmuneModel:
             self._removeCancer(cell)
             return 1
 
-        # Check for cancer cells within a range of 5 cells
-        cancer_cells_in_range = self.get_cells_in_range(cell, 5)
-        cancer_cells_in_range = [c for c in cancer_cells_in_range if self.cancerLattice[c[0], c[1]] == CANCER_CELL]
+        # check for cancer within atttack_range
+        cancer_in_range =self.get_cells_in_range(cell, self.attack_range)
+        cancer_in_range =[c for c in cancer_in_range if self.cancerLattice[c[0],c[1]] ==CANCER_CELL]
 
-        if cancer_cells_in_range:
-            # Move towards the closest cancer cell
-            target = min(cancer_cells_in_range, key=lambda c: self.distance(cell, c))
-            move = self.get_step_towards(cell, target)
+        if cancer_in_range:
+            target =min(cancer_in_range, key=lambda c: self.distance(cell, c))
+            move =self.get_step_towards(cell, target)
         else:
-            # Random movement
-            moves = self._neighborlist(cell, True, lattice=self.immuneLattice)
+            # random
+            moves =self._neighborlist(cell,True,lattice=self.immuneLattice)
             if not moves:
                 return 0
             move = random.choice(moves)
 
-        # Move T-Killer cell
         self._removeImmune(cell)
         self._addImmune(move)
         self.deleteTkiller(move)
@@ -284,16 +300,16 @@ class CancerImmuneModel:
                     cells_in_range.append((row, col))
         return cells_in_range
 
-    def kill_extra_tkiller_cells(self, range_dist: int, max_immune_cells: int):
+    def density_remover(self, range_dist: int, max_immune_cells: int):
         for cell in list(self.immuneCells):
             cells_in_range = self.get_cells_in_range(cell, range_dist)
             immune_count = sum(1 for c in cells_in_range if self.immuneLattice[c[0], c[1]] == TKILLER_CELL)
             cancer_count = sum(1 for c in cells_in_range if self.cancerLattice[c[0], c[1]] == CANCER_CELL)
 
-            # Check if there are no cancer cells and more than max_immune_cells in the vicinity
-            if cancer_count == 0 and immune_count > max_immune_cells:
-                excess_count = immune_count - max_immune_cells
-                cells_to_remove = self.select_cells_to_remove(cells_in_range, excess_count)
+            #if no cancer and more than treshhold in range we remove in steps
+            if cancer_count ==0 and immune_count >max_immune_cells:
+                excess_count =immune_count -max_immune_cells
+                cells_to_remove =self.select_cells_to_remove(cells_in_range, excess_count)
 
                 for remove_cell in cells_to_remove:
                     self._removeImmune(remove_cell)
@@ -301,7 +317,7 @@ class CancerImmuneModel:
     def select_cells_to_remove(self, cells_in_range, number_to_remove):
         immune_cells_in_range = [cell for cell in cells_in_range if
                                  self.immuneLattice[cell[0], cell[1]] == TKILLER_CELL]
-        random.shuffle(immune_cells_in_range)  # To randomize which cells are chosen
+        random.shuffle(immune_cells_in_range)
         return set(immune_cells_in_range[:number_to_remove])
 
     def _addCancer(self, cell: Tuple[int, int]):
@@ -338,9 +354,12 @@ class CancerImmuneModel:
         self.cancerCells = self.cancerCells_t1
         self.cancerCells_t1 = set()
         self.immuneCells = self.immuneCells_t1
-        self.kill_extra_tkiller_cells(range_dist=5, max_immune_cells=5)
+        self.density_remover(range_dist=5, max_immune_cells=5)
         self.immuneCells_t1 = set()
 
-        self.chance_of_cancer_emergence()
+        self.cancer_emergence()
+
+        cluster_sizes_at_this_step = self.detect_clusters()
+        self.cluster_sizes.extend(cluster_sizes_at_this_step)
 
         self.time += 1
