@@ -33,13 +33,15 @@ class CancerImmuneModel:
             length: Length of the lattice
             width : Width of the lattice
         """
+        self.time = 0
+
         self.dim =  (length, width)
         
         self.cancerLattice = np.zeros((length, width), dtype=int)
         self.immuneLattice = np.zeros((length, width), dtype=int)
 
-        self.pImmuneKill     = pImmuneKill
-        self.pCancerMult     = pCancerMult
+        self.pImmuneKill   = pImmuneKill
+        self.pCancerMult   = pCancerMult
 
         self.cancerCells   :  Set[Tuple[int, int]] = set()
         self.immuneCells   :  Set[Tuple[int, int]] = set()
@@ -61,16 +63,25 @@ class CancerImmuneModel:
             self.cancerLattice[row, col] = CANCER_CELL
             self.cancerCells.add((row, col))
         
-    def seedImmune(self, nCells: int) -> None:
+    def seedImmune(self, nCells: int) -> int:
         """
         Places nCells immune cells on random cells in the immune lattice
+
+        Returns the amount of placement attempts made
         """
-        for i in range(nCells):
+        cells = 0
+        cycles = 0
+        while cells < nCells:
+            cycles += 1
             row = randint(0, self.dim[0] - 1)
             col = randint(0, self.dim[1] - 1)
 
-            self.immuneLattice[row, col] = TKILLER_CELL
-            self.immuneCells.add((row, col))
+            if self.cancerLattice[row, col] == 0:
+                self.immuneLattice[row, col] = TKILLER_CELL
+                self.immuneCells.add((row, col))
+                cells += 1
+        
+        return cycles
 
     def _neighborlist(self, cell: Tuple[int, int], periodic=False, includeSelf=False, 
                       lattice: np.ndarray[int] = None, emptyOnly=True) -> List[Tuple[int, int]]:
@@ -205,3 +216,5 @@ class CancerImmuneModel:
         self.cancerCells_t1 = set()
         self.immuneCells = self.immuneCells_t1
         self.immuneCells_t1 = set()
+
+        self.time += 1
