@@ -33,9 +33,11 @@ class Visualizer:
             self.ax1.plot(self.immuneCells, label="Immune")
             self.ax1.plot(self.cancerCells, label="Cancer")
             self.ax1.legend()
+            # self.ax1.set_yscale("log")
+            # self.ax1.set_xscale("log")
 
 
         
     def run(self):
-        ani = FuncAnimation(self.fig, self.frame, frames=None, interval=100, repeat = False)
+        ani = FuncAnimation(self.fig, self.frame, frames=None, interval=1, repeat = False)
         plt.show()

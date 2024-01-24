@@ -172,7 +172,7 @@ class CancerImmuneModel:
         freeSpace = self._neighborlist(cell, lattice=self.cancerLattice)
 
         if not freeSpace:
-            self.seedImmune(1)
+            # self.seedImmune(1)
             return 1
   
         targetID = 0
@@ -249,7 +249,19 @@ class CancerImmuneModel:
 
         self.immuneCells_t1.add(target) # Add target location to scheduler
         
-        self.deleteTkiller(target)
+        self.immuneDeath(target)
+
+        return 2
+    
+    def immuneDeath(self, cell):
+        if self.get_nCancerCells() != 0:
+            return 0
+        
+        if random() <= 0.001:
+            self.immuneCells_t1.remove(cell)
+            self.immuneLattice[cell[0], cell[1]] = EMPTY
+            return 1
+        
         return 2
 
     def timestep(self):
@@ -262,8 +274,8 @@ class CancerImmuneModel:
         for cell in self.immuneCells:
             self.multiTKiller(cell)
         
-        if self.time % 1000:
-                self.seedCancer(1)
+        if not self.time % 30:
+            self.seedCancer(1)
 
         
         self.cancerCells = self.cancerCells_t1
