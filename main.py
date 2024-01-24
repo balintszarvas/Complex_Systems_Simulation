@@ -10,7 +10,7 @@ def main():
     for i in range(100):
         model.timestep()
     
-    model.seedImmune(round(200 * 200 / 10))
+    model.seedImmune(round(200 * 200 / 100))
 
     vis = Visualizer(model)
     vis.run()
