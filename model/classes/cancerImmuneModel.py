@@ -186,6 +186,30 @@ class CancerImmuneModel:
         self.immuneCells_t1.add(newCell) # add new cell to schedule
         return 2
     
+    def deleteTkiller(self, cell):        
+        # Check for cancer cells in the neighborhood.
+        cancer_neighbors = 0
+        tkiller_neighbors = 0
+        neighbors = self._neighborlist(cell, lattice=self.cancerLattice, emptyOnly=False)
+        for neighbor in neighbors:
+            if self.cancerLattice[neighbor[0], neighbor[1]] == CANCER_CELL:
+                cancer_neighbors += 1
+            if self.immuneLattice[neighbor[0], neighbor[1]] == TKILLER_CELL:
+                tkiller_neighbors += 1
+        
+        # If there are cancer cells nearby, do nothing.
+        if cancer_neighbors > 0:
+            return 0
+
+        # If there are no cancer cells but more than 2 T-Killer cells, the cell dies in the next timestep.
+        if tkiller_neighbors > 5:
+            # Remove the current cell from the next timestep's set of T-Killer cells.
+            self.immuneLattice[cell[0], cell[1]] = EMPTY
+            self.immuneCells_t1.remove(cell)
+            return 1
+
+        return 0
+    
     def propagateTKiller(self, cell) -> int:
         """
         Propagates a T-Killer immune cell. Moves TKILLER_CELL on immuneLattice and adds new position
@@ -225,7 +249,7 @@ class CancerImmuneModel:
 
         self.immuneCells_t1.add(target) # Add target location to scheduler
         
-
+        self.deleteTkiller(target)
         return 2
 
     def timestep(self):
