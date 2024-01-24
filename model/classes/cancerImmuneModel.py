@@ -51,6 +51,10 @@ class CancerImmuneModel:
     def get_nCancerCells(self) -> int:
         """Returns the amount of cancer cells in the system"""
         return len(self.cancerCells)
+    
+    def get_nImmuneCells(self) -> int:
+        """Returns the amount of immune cells in the system"""
+        return len(self.immuneCells)
 
     def seedCancer(self, nCells: int) -> None:
         """
