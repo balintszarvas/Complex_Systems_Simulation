@@ -169,7 +169,7 @@ class CancerImmuneModel:
         freeSpace = self._neighborlist(cell, lattice=self.cancerLattice)
 
         if not freeSpace:
-            self.seedImmune(1)
+            # self.seedImmune(1)
             return 1
   
         targetID = 0
@@ -184,26 +184,20 @@ class CancerImmuneModel:
     
     def deleteTkiller(self, cell):        
         # Check for cancer cells in the neighborhood.
-        cancer_neighbors = 0
-        tkiller_neighbors = 0
-        neighbors = self._neighborlist(cell, lattice=self.cancerLattice, emptyOnly=False)
-        for neighbor in neighbors:
-            if self.cancerLattice[neighbor[0], neighbor[1]] == CANCER_CELL:
-                cancer_neighbors += 1
-            if self.immuneLattice[neighbor[0], neighbor[1]] == TKILLER_CELL:
-                tkiller_neighbors += 1
-        
+        cancer_neighbors = self._neighborlist(cell, lattice=self.cancerLattice, emptyOnly=False)
+        tkiller_neighbors = self._neighborlist(cell, lattice=self.immuneLattice, emptyOnly=False)
+
         # If there are cancer cells nearby, do nothing.
-        if cancer_neighbors > 0:
+        if len(cancer_neighbors) > 0:
             return 0
 
         # If there are no cancer cells but more than 2 T-Killer cells, the cell dies in the next timestep.
-        if tkiller_neighbors > 5:
+        if len(tkiller_neighbors) > 2:
             # Remove the current cell from the next timestep's set of T-Killer cells.
             self._removeImmune(cell)
             return 1
 
-        return 0
+        return 2
     
     def propagateTKiller(self, cell) -> int:
         """
@@ -237,9 +231,21 @@ class CancerImmuneModel:
         
         # Move cell from current location to target location
         self._removeImmune(cell)
-        self._addImmune(target) # Add target location to schedule
-
+        self._addImmune(target)
+        
+        self.immuneDeath(target)
         self.deleteTkiller(target)
+        return 2
+    
+    def immuneDeath(self, cell):
+        if self.get_nCancerCells() != 0:
+            return 0
+        
+        if random() <= 0.001:
+            self.immuneCells_t1.remove(cell)
+            self.immuneLattice[cell[0], cell[1]] = EMPTY
+            return 1
+        
         return 2
 
     def _addCancer(self, cell: Tuple[int, int]):
@@ -272,8 +278,8 @@ class CancerImmuneModel:
         for cell in self.immuneCells:
             self.multiTKiller(cell)
         
-        if self.time % 1000:
-                self.seedCancer(1)
+        if not self.time % 10:
+            self.seedCancer(1)
 
         
         self.cancerCells = self.cancerCells_t1
