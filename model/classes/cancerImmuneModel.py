@@ -61,7 +61,7 @@ class CancerImmuneModel:
             col = randint(0, self.dim[1] - 1)
 
             self.cancerLattice[row, col] = CANCER_CELL
-            self.cancerCells.add((row, col))
+            self.cancerCells_t1.add((row, col))
         
     def seedImmune(self, nCells: int) -> int:
         """
@@ -165,18 +165,18 @@ class CancerImmuneModel:
         if self.propagateTKiller(cell) != 1:
             return 0
         
-        neighbors = self._neighborlist(cell, lattice=self.cancerLattice)
+        freeSpace = self._neighborlist(cell, lattice=self.cancerLattice)
 
-        if not neighbors:
+        if not freeSpace:
             self.seedImmune(1)
             return 1
   
         targetID = 0
-        if len(neighbors) > 1:
+        if len(freeSpace) > 1:
             # Take only position if single available space
-            targetID = randint(0, len(neighbors) - 1)
+            targetID = randint(0, len(freeSpace) - 1)
 
-        newCell = neighbors[targetID]
+        newCell = freeSpace[targetID]
 
         self.immuneLattice[newCell[0], newCell[1]] = TKILLER_CELL # Create new cell on lattice 
         self.immuneCells_t1.add(newCell) # add new cell to schedule
@@ -231,9 +231,11 @@ class CancerImmuneModel:
 
         for cell in self.cancerCells:
             self.propagateCancerCell(cell)
-            time += 1
         for cell in self.immuneCells:
             self.multiTKiller(cell)
+        
+        if self.time % 1000:
+                self.seedCancer(1)
 
         
         self.cancerCells = self.cancerCells_t1
