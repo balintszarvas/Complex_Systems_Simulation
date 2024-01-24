@@ -1,5 +1,7 @@
 from .cancerImmuneModel import CancerImmuneModel
 import numpy as np
+import matplotlib
+matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
@@ -21,11 +23,11 @@ class Visualizer:
 
         self.immuneCells: List[int] = []
         self.cancerCells: List[int] = []
-    
+
     def frame(self, i):
             self.model.timestep()
             self.ax0.clear()
-            self.ax0.imshow(self.model.cancerLattice * np.invert(self.model.immuneLattice.astype(bool)) + self.model.immuneLattice) 
+            self.ax0.imshow(self.model.cancerLattice * np.invert(self.model.immuneLattice.astype(bool)) + self.model.immuneLattice)
 
             self.immuneCells.append(self.model.get_nImmuneCells())
             self.cancerCells.append(self.model.get_nCancerCells())
@@ -37,7 +39,7 @@ class Visualizer:
             # self.ax1.set_xscale("log")
 
 
-        
+
     def run(self):
         ani = FuncAnimation(self.fig, self.frame, frames=None, interval=1, repeat = False)
         plt.show()

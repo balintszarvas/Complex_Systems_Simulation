@@ -1,5 +1,8 @@
-from numpy.random import randint, random, choice
+from numpy.random import randint, random
 import numpy as np
+from collections import defaultdict
+import matplotlib.pyplot as plt
+import random
 
 EMPTY       = 0
 CANCER_CELL = 1
@@ -13,10 +16,10 @@ class CancerImmuneModel:
 
     Properties:
         dim        (Tuple[int, int]): Length and width of the model
-        
+
         cancerLattice (ndarray[int]): Lattice containing the cancer cells of the system
         immuneLattice (ndarray[int]): Lattice containing the immune cells of the system
-        
+
         pImmuneKill          (float): Probability that an immune cell kills a cancer cell
         pCancerMult          (float): Probability that a cancer cell multiplies during a timestep
 
@@ -25,7 +28,7 @@ class CancerImmuneModel:
         cancerCells_t1 (Set[Tuple[int, int]]): Set of all cell coordinates containing cancer cells fopr next timestep
         immuneCells_t1 (Set[Tuple[int, int]]): List of all cell coordinates containing immune cells fopr next timestep
     """
-    def __init__(self, length: int, width: int, pImmuneKill = 1.0, pCancerMult = 0.05) -> None:
+    def __init__(self, length: int, width: int, pImmuneKill = 1.0, pCancerMult = 0.05, pCancerEmergence=0.01) -> None:
         """
         initializer function
 
@@ -36,7 +39,7 @@ class CancerImmuneModel:
         self.time = 0
 
         self.dim =  (length, width)
-        
+
         self.cancerLattice = np.zeros((length, width), dtype=int)
         self.immuneLattice = np.zeros((length, width), dtype=int)
 
@@ -47,11 +50,30 @@ class CancerImmuneModel:
         self.immuneCells   :  Set[Tuple[int, int]] = set()
         self.cancerCells_t1:  Set[Tuple[int, int]] = set()
         self.immuneCells_t1:  Set[Tuple[int, int]] = set()
-    
+
+        self.cluster_sizes = []
+        self.cluster_durations = defaultdict(int)
+
+        self.pCancerEmergence = pCancerEmergence
+
+    def chance_of_cancer_emergence(self):
+        """
+        Simulate the random emergence of new cancer cells by selecting a random empty cell
+        """
+        if np.random.random() < self.pCancerEmergence:
+            # Create a list of all empty cells
+            empty_cells = [(row, col) for row in range(self.dim[0])
+                           for col in range(self.dim[1]) if self.cancerLattice[row, col] == EMPTY]
+
+            # If there are any empty cells, choose one at random for cancer emergence
+            if empty_cells:
+                new_cancer_cell = random.choice(empty_cells)
+                self._addCancer(new_cancer_cell)
+
     def get_nCancerCells(self) -> int:
         """Returns the amount of cancer cells in the system"""
         return len(self.cancerCells)
-    
+
     def get_nImmuneCells(self) -> int:
         """Returns the amount of immune cells in the system"""
         return len(self.immuneCells)
@@ -65,7 +87,7 @@ class CancerImmuneModel:
             col = randint(0, self.dim[1] - 1)
 
             self._addCancer((row, col))
-        
+
     def seedImmune(self, nCells: int) -> int:
         """
         Places nCells immune cells on random cells in the immune lattice
@@ -82,10 +104,10 @@ class CancerImmuneModel:
             if self.cancerLattice[row, col] == 0:
                 self._addImmune((row, col))
                 cells += 1
-        
+
         return cycles
 
-    def _neighborlist(self, cell: Tuple[int, int], periodic=False, includeSelf=False, 
+    def _neighborlist(self, cell: Tuple[int, int], periodic=False, includeSelf=False,
                       lattice: np.ndarray[int] = None, emptyOnly=True) -> List[Tuple[int, int]]:
         """
         Returns a list of neighboring cell coordinates for a given cell using Moore's neighborhood.
@@ -103,9 +125,9 @@ class CancerImmuneModel:
         output = []
         row, col = cell
 
-        for vertical in [-1, 0, 1]: 
+        for vertical in [-1, 0, 1]:
         # Loop over surrounding rows
-            for horizontal in [-1, 0, 1]: 
+            for horizontal in [-1, 0, 1]:
             # Loop over surrounding collumns
                 if vertical == 0 and horizontal == 0 and not includeSelf:
                 # Skip neighbor if its the same cell unless specifically included
@@ -118,11 +140,11 @@ class CancerImmuneModel:
                 # If periodic boundary conditions are used, take the modulo of the coordinate and the dimensions
                     neighborRow = neighborRow % self.dim[0]
                     neighborCol = neighborCol % self.dim[1]
-                
+
                 if (neighborRow >= 0 and neighborRow < self.dim[0] and neighborCol >= 0 and neighborCol < self.dim[1]):
                 # Exclude all out of bounds cells
                     if not lattice is None and emptyOnly == bool(lattice[neighborRow, neighborCol]):
-                    # when a lattice is specified, skip cell if emptyonly and a cell is occupied or 
+                    # when a lattice is specified, skip cell if emptyonly and a cell is occupied or
                     # if not emptyonly and a cell is not occupied (XNOR)
                         continue
 
@@ -136,22 +158,22 @@ class CancerImmuneModel:
 
         Args:
             Cell (Tuple[int, int]): Cell coordinate
-        
+
         Returns (int): 0 if not able to multiply by chance, 1 if not able to multiply from overcrowding
                        and 2 if sucessfully multiplied
         """
         self._addCancer(cell)
 
-        if random() > self.pCancerMult:
+        if random.random() > self.pCancerMult:
             # Stop if cell will not multiply
             return 0
-        
+
         neighbors = self._neighborlist(cell, lattice=self.cancerLattice)
 
         if not neighbors:
             # Stop multiplication attempt if there are no free spaces in neighborhood
             return 1
-        
+
         targetID = 0
         if len(neighbors) > 1:
             # Take only position if single available space
@@ -161,17 +183,17 @@ class CancerImmuneModel:
 
         self._addCancer(newCell)
         return 2
-    
+
     def multiTKiller(self, cell):
         if self.propagateTKiller(cell) != 1:
             return 0
-        
+
         freeSpace = self._neighborlist(cell, lattice=self.cancerLattice)
 
         if not freeSpace:
             # self.seedImmune(1)
             return 1
-  
+
         targetID = 0
         if len(freeSpace) > 1:
             # Take only position if single available space
@@ -181,8 +203,8 @@ class CancerImmuneModel:
 
         self._addImmune(newCell)
         return 2
-    
-    def deleteTkiller(self, cell):        
+
+    def deleteTkiller(self, cell):
         # Check for cancer cells in the neighborhood.
         cancer_neighbors = self._neighborlist(cell, lattice=self.cancerLattice, emptyOnly=False)
         tkiller_neighbors = self._neighborlist(cell, lattice=self.immuneLattice, emptyOnly=False)
@@ -192,22 +214,22 @@ class CancerImmuneModel:
             return 0
 
         # If there are no cancer cells but more than 2 T-Killer cells, the cell dies in the next timestep.
-        if len(tkiller_neighbors) > 2:
-            # Remove the current cell from the next timestep's set of T-Killer cells.
-            self._removeImmune(cell)
-            return 1
-        
+        # if len(tkiller_neighbors) > 2:
+        #     # Remove the current cell from the next timestep's set of T-Killer cells.
+        #     self._removeImmune(cell)
+        #     return 1
+
         if self.get_nCancerCells() != 0:
             return 0
-        
-        if random() <= 0.01:
+
+        if random.random() <= 0.01:
             self._removeImmune
             return 1
-        
+
         # if self.get_nImmuneCells() > (200*200/100)
 
         return 2
-    
+
     def propagateTKiller(self, cell) -> int:
         """
         Propagates a T-Killer immune cell. Moves TKILLER_CELL on immuneLattice and adds new position
@@ -216,43 +238,80 @@ class CancerImmuneModel:
         Args:
             Cell (Tuple[int, int]): Cell coordinate
 
-        Returns (int): 0 if unable to move from overcrowding, 1 if succesfull in killing a cancer cell 
+        Returns (int): 0 if unable to move from overcrowding, 1 if succesfull in killing a cancer cell
                        and 2 if moving without killing a cancer cell.
         """
         self._addImmune(cell)
-        if self.cancerLattice[cell[0], cell[1]] and random() <= self.pImmuneKill:
-        # If currently occupying a cell with a cancer cell, randomly kill it. If sucessful, stay, else continue
+        if self.cancerLattice[cell[0], cell[1]] and random.random() <= self.pImmuneKill:
             self._removeCancer(cell)
             return 1
-    
-        moves = self._neighborlist(cell, True, lattice=self.immuneLattice)
 
-        if not moves:
-        # If no possible moves are available, stay, else continue.
-            return 0
+        # Check for cancer cells within a range of 5 cells
+        cancer_cells_in_range = self.get_cells_in_range(cell, 5)
+        cancer_cells_in_range = [c for c in cancer_cells_in_range if self.cancerLattice[c[0], c[1]] == CANCER_CELL]
 
-        moveIndex = 0
-        if len(moves) > 1:
-        # If more than 1 move is possible, pick a random option
-            moveIndex = randint(0, len(moves) - 1)
-        
-        target = moves[moveIndex]
-        
-        # Move cell from current location to target location
+        if cancer_cells_in_range:
+            # Move towards the closest cancer cell
+            target = min(cancer_cells_in_range, key=lambda c: self.distance(cell, c))
+            move = self.get_step_towards(cell, target)
+        else:
+            # Random movement
+            moves = self._neighborlist(cell, True, lattice=self.immuneLattice)
+            if not moves:
+                return 0
+            move = random.choice(moves)
+
+        # Move T-Killer cell
         self._removeImmune(cell)
-        self._addImmune(target)
-        
-        self.deleteTkiller(target)
+        self._addImmune(move)
+        self.deleteTkiller(move)
         return 2
 
+    def distance(self, cell1, cell2):
+        return np.sqrt((cell1[0] -cell2[0])** 2 +(cell1[1] - cell2[1]) **2 )
+
+    def get_step_towards(self, current_cell, target_cell):
+        row_step =np.sign(target_cell[0] - current_cell[0])
+        col_step =np.sign(target_cell[1] - current_cell[1])
+        return (current_cell[0] + row_step, current_cell[1] + col_step )
+
+
+    def get_cells_in_range(self, cell, range_dist):
+        cells_in_range = []
+        for row in range(cell[0] - range_dist, cell[0] + range_dist + 1):
+            for col in range(cell[1] - range_dist, cell[1] + range_dist + 1):
+                if 0 <= row < self.dim[0] and 0 <= col < self.dim[1]:
+                    cells_in_range.append((row, col))
+        return cells_in_range
+
+    def kill_extra_tkiller_cells(self, range_dist: int, max_immune_cells: int):
+        for cell in list(self.immuneCells):
+            cells_in_range = self.get_cells_in_range(cell, range_dist)
+            immune_count = sum(1 for c in cells_in_range if self.immuneLattice[c[0], c[1]] == TKILLER_CELL)
+            cancer_count = sum(1 for c in cells_in_range if self.cancerLattice[c[0], c[1]] == CANCER_CELL)
+
+            # Check if there are no cancer cells and more than max_immune_cells in the vicinity
+            if cancer_count == 0 and immune_count > max_immune_cells:
+                excess_count = immune_count - max_immune_cells
+                cells_to_remove = self.select_cells_to_remove(cells_in_range, excess_count)
+
+                for remove_cell in cells_to_remove:
+                    self._removeImmune(remove_cell)
+
+    def select_cells_to_remove(self, cells_in_range, number_to_remove):
+        immune_cells_in_range = [cell for cell in cells_in_range if
+                                 self.immuneLattice[cell[0], cell[1]] == TKILLER_CELL]
+        random.shuffle(immune_cells_in_range)  # To randomize which cells are chosen
+        return set(immune_cells_in_range[:number_to_remove])
+
     def _addCancer(self, cell: Tuple[int, int]):
-        self.cancerLattice[cell[0], cell[1]] = CANCER_CELL # Create new cell on lattice 
+        self.cancerLattice[cell[0], cell[1]] = CANCER_CELL # Create new cell on lattice
         self.cancerCells_t1.add(cell) # add new cell to schedule
 
     def _removeCancer(self, cell: Tuple[int, int]):
         if cell not in self.cancerCells_t1:
             print(f"Warning: Specified cancer cell {cell[0]},{cell[1]} not in t1 scheduler")
-        self.cancerLattice[cell[0], cell[1]] = EMPTY # Create new cell on lattice 
+        self.cancerLattice[cell[0], cell[1]] = EMPTY # Create new cell on lattice
         self.cancerCells_t1.remove(cell) # remove cell from scheduler
 
     def _addImmune(self, cell: Tuple[int, int]):
@@ -264,24 +323,24 @@ class CancerImmuneModel:
             print(f"Warning: Specified cancer cell {cell[0]},{cell[1]} not in t1 scheduler")
         self.immuneLattice[cell[0], cell[1]] = EMPTY
         self.immuneCells_t1.remove(cell)
-    
+
+
     def timestep(self):
         """
         Propagates the model by 1 step
-        """ 
+        """
 
         for cell in self.cancerCells:
             self.propagateCancerCell(cell)
         for cell in self.immuneCells:
             self.multiTKiller(cell)
-        
-        if not self.time % 10:
-            self.seedCancer(1)
 
-        
         self.cancerCells = self.cancerCells_t1
         self.cancerCells_t1 = set()
         self.immuneCells = self.immuneCells_t1
+        self.kill_extra_tkiller_cells(range_dist=5, max_immune_cells=5)
         self.immuneCells_t1 = set()
+
+        self.chance_of_cancer_emergence()
 
         self.time += 1
