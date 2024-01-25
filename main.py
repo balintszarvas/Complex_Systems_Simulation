@@ -10,11 +10,15 @@ def main():
     for i in range(100):
         model.timestep()
 
-    model.seedImmune(40)
+    model.seedImmune(100)
 
-    vis = Visualizer(model)
+    threshold_equilibrium = 0.001
+    vis = Visualizer(model, threshold_equilibrium)
     vis.run()
+    vis.get_equilibrium()
+    print(vis.ind)
     model.plot_cluster_sizes()
+
 
 if __name__ == "__main__":
     main()

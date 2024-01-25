@@ -8,7 +8,8 @@ from matplotlib.animation import FuncAnimation
 from typing import List
 
 class Visualizer:
-    def __init__(self, model: CancerImmuneModel) -> None:
+    def __init__(self, model: CancerImmuneModel, threshold) -> None:
+        self.threshold = threshold
         self.model = model
         self.latticeCells = (self.model.dim[0] * self.model.dim[1])
         fig, axs = plt.subplots(1, 2)
@@ -27,6 +28,7 @@ class Visualizer:
 
         self.immuneCells: List[int] = []
         self.cancerCells: List[int] = []
+        self.ind = 'no found'
 
     def frame(self, i):
             self.model.timestep()
@@ -42,10 +44,40 @@ class Visualizer:
             # self.ax1.set_yscale("log")
             # self.ax1.set_xscale("log")
 
+    def get_equilibrium_2(self):
+        avg_list = []
+        for ind in range(0, len(self.immuneCells)-10, 10):
+            avg = 0
+            for i in range(10):
+                avg += self.immuneCells[ind]
+            avg_list.append(avg)
+
+        for ind in range(len(avg_list)):
+            current_value = avg_list[ind]
+            for j in range(i + 1, len(avg_list)):
+                if avg_list[j] < current_value:
+                    self.ind = ind
+                    return 1
+        return 2
+
+    def get_no_cancer(self):
+        for ind, value in enumerate(self.cancerCells):
+            if self.cancerCells[ind] == 0 and self.cancerCells[ind+1] == 0:
+                return ind
+        return 2
+    
+    def get_equilibrium(self):
+        start = self.get_no_cancer()
+                
+        for ind in range(start, len(self.cancerCells)-10):
+            print(ind)
+            if abs(self.cancerCells[ind] - self.cancerCells[ind+10]) < self.threshold:
+                self.ind = ind
+                return 1
+        return 2  
 
     def run(self):
         ani = FuncAnimation(self.fig, self.frame, frames=None, interval=1, repeat = False)
         plt.show()
-        print(self.immuneCells)
 
         
