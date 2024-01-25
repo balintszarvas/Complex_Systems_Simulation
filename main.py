@@ -7,10 +7,10 @@ def main():
     model = CancerImmuneModel(200, 200, 1.0, 0.01)
     model.seedCancer(100)
     
-    for i in range(100):
-        model.timestep()
+    #for i in range(100):
+    #    model.timestep()
     
-    model.seedImmune(round(200 * 200 / 10))
+    model.seedImmune(round(200 * 200 * 0.020))
 
     vis = Visualizer(model)
     vis.run()
