@@ -1,5 +1,5 @@
 from numpy.random import randint, random, choice
-from ..helpers import randomTuple
+from ..helpers import randomTuple, mooreMaxSize
 import numpy as np
 
 EMPTY       = 0
@@ -23,20 +23,21 @@ class CancerImmuneModel:
 
         cancerCells    (Set[Tuple[int, int]]): Set of all cell coordinates containing cancer cells. 
                                                used for scheduling
-        immuneCells    (Set[Tuple[int, int]]): List of all cell coordinates containing immune cells. 
+        immuneCells    (Set[Tuple[int, int]]): List of all cell coordinates containing immune cells. cancerGrowthp
                                                used for scheduling
         cancerCells_t1 (Set[Tuple[int, int]]): Set of all cell coordinates containing cancer cells for next timestep
         immuneCells_t1 (Set[Tuple[int, int]]): List of all cell coordinates containing immune cells fopr next timestep
     """
-    def __init__(self, length: int, width: int, pImmuneKill = 1.0, pCancerMult = 0.05) -> None:
+    def __init__(self, length: int, width: int, pImmuneKill = 1.0, pCancerMult = 0.05, pCancerSpawn = 0.01) -> None:
         """
         initializer function
 
         Args:
-            length        (int): Length of the lattice.
-            width         (int): Width of the lattice.
-            pImmuneKill (float): Chance an immune cell kills a cancer cell.
-            pCancerMult (float): Chance a cancer cell multiplies every timestep.
+            length          (int): Length of the lattice.
+            width           (int): Width of the lattice.
+            pImmuneKill   (float): Chance an immune cell kills a cancer cell.
+            pCancerMult   (float): Chance a cancer cell multiplies every timestep.
+            pCancerSpawn (float): Chance a normal cell becomes cancerous per timestep.
         """
         self.time = 0
 
@@ -47,6 +48,7 @@ class CancerImmuneModel:
 
         self.pImmuneKill   = pImmuneKill
         self.pCancerMult   = pCancerMult
+        self.pCancerSpawn = pCancerSpawn
 
         self.cancerCells   :  Set[Tuple[int, int]] = set()
         self.immuneCells   :  Set[Tuple[int, int]] = set()
@@ -93,10 +95,6 @@ class CancerImmuneModel:
         """
         Returns a list of neighboring cell coordinates for a given cell using Moore's neighborhood.
 
-        TODO:
-            Move to helpers file? (neighborlist is independent from the actual model and is appropriate
-            to be used as black box method within the class)
-
         Args:
             cell    (Tuple[int, int]): The coordinates of the cell
             periodic           (bool): Wether periodic boundary conditions are enforced
@@ -126,7 +124,7 @@ class CancerImmuneModel:
                 # If periodic boundary conditions are used, take the modulo of the coordinate and the dimensions
                     neighborRow = neighborRow % self.dim[0]
                     neighborCol = neighborCol % self.dim[1]
-                
+
                 if (neighborRow >= 0 and neighborRow < self.dim[0] and neighborCol >= 0 and neighborCol < self.dim[1]):
                 # Exclude all out of bounds cells
                     if not lattice is None and emptyOnly == bool(lattice[neighborRow, neighborCol]):
@@ -183,7 +181,7 @@ class CancerImmuneModel:
         self._addImmune(newCell)
         return 2
     
-    def deleteTkiller(self, cell: Tuple[int, int], cDetectionRadius=1):
+    def deleteTkiller(self, cell: Tuple[int, int]):
         """
         Check if a T-killer Cell is to be removed, based on the presence of cancer cells nearby and 
         immune cell crowding
@@ -192,16 +190,23 @@ class CancerImmuneModel:
             Cell (Tuple[int, int]): The coordinates of the cell attempting to multiply
             cDetectionRadius (int): Radius for the moore neighborhood where to detect cancer cells.
         """
+        C_DETECTION_RADIUS = 1   # Detection radius for cancer cells
+        I_DETECTION_RADIUS = 1   # Detection radius for Immune cells
+        I_DENS_LIMIT       = 1/8 # Density limit for immune cells
+
+        P_RDEATH = 0.01          # Probability of a cell randomly dying
+
         # Check for cancer cells in the neighborhood.
-        cancer_neighbors = self._neighborlist(cell, lattice=self.cancerLattice, emptyOnly=False, radius=cDetectionRadius)
+        cancer_neighbors = self._neighborlist(cell, lattice=self.cancerLattice, emptyOnly=False, radius=C_DETECTION_RADIUS)
+        
         # If there are cancer cells nearby, do nothing.
         if len(cancer_neighbors) > 0:
             return 0
 
-        tkiller_neighbors = self._neighborlist(cell, lattice=self.immuneLattice, emptyOnly=False)
+        tkiller_neighbors = self._neighborlist(cell, lattice=self.immuneLattice, emptyOnly=False, radius=I_DETECTION_RADIUS)
 
-        # If there are no cancer cells but more than 2 T-Killer cells, the cell dies in the next timestep.
-        if len(tkiller_neighbors) > 2:
+        # If there are no cancer cells but more than 2 T-Killer cells, the cell dies before the next timestep.
+        if len(tkiller_neighbors) / mooreMaxSize(I_DETECTION_RADIUS) > I_DENS_LIMIT:
             # Remove the current cell from the next timestep's set of T-Killer cells.
             self._removeImmune(cell)
             return 1
@@ -209,7 +214,7 @@ class CancerImmuneModel:
         if self.get_nCancerCells() != 0:
             return 0
         
-        if random() <= 0.01: # TODO: move magic number
+        if random() <= P_RDEATH:
             self._removeImmune
             return 1
 
@@ -281,7 +286,7 @@ class CancerImmuneModel:
         for cell in self.immuneCells:
             self.propagateTKiller(cell)
         
-        if not self.time % 10:
+        if random() < self.pCancerSpawn:
             self.seedCancer(1)
 
         self.cancerCells = self.cancerCells_t1
