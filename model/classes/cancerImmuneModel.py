@@ -21,9 +21,11 @@ class CancerImmuneModel:
         pImmuneKill          (float): Probability that an immune cell kills a cancer cell
         pCancerMult          (float): Probability that a cancer cell multiplies during a timestep
 
-        cancerCells    (Set[Tuple[int, int]]): Set of all cell coordinates containing cancer cells, used for scheduling
-        immuneCells    (Set[Tuple[int, int]]): List of all cell coordinates containing immune cells, used for scheduling
-        cancerCells_t1 (Set[Tuple[int, int]]): Set of all cell coordinates containing cancer cells fopr next timestep
+        cancerCells    (Set[Tuple[int, int]]): Set of all cell coordinates containing cancer cells. 
+                                               used for scheduling
+        immuneCells    (Set[Tuple[int, int]]): List of all cell coordinates containing immune cells. 
+                                               used for scheduling
+        cancerCells_t1 (Set[Tuple[int, int]]): Set of all cell coordinates containing cancer cells for next timestep
         immuneCells_t1 (Set[Tuple[int, int]]): List of all cell coordinates containing immune cells fopr next timestep
     """
     def __init__(self, length: int, width: int, pImmuneKill = 1.0, pCancerMult = 0.05) -> None:
@@ -31,8 +33,10 @@ class CancerImmuneModel:
         initializer function
 
         Args:
-            length: Length of the lattice
-            width : Width of the lattice
+            length        (int): Length of the lattice.
+            width         (int): Width of the lattice.
+            pImmuneKill (float): Chance an immune cell kills a cancer cell.
+            pCancerMult (float): Chance a cancer cell multiplies every timestep.
         """
         self.time = 0
 
@@ -157,7 +161,14 @@ class CancerImmuneModel:
         self._addCancer(newCell)
         return 2
     
-    def multiTKiller(self, cell):
+    def multiTKiller(self, cell: Tuple[int, int]):
+        """
+        Multiply a TKiller cell by placing a new cell in it's direct neighborhood, but only if there
+        are nearby cancer cells.
+
+        Args:
+            Cell (Tuple[int, int]): The coordinates of the cell attempting to multiply
+        """
         freeSpace = self._neighborlist(cell, lattice=self.cancerLattice)
 
         if not freeSpace:
@@ -168,9 +179,17 @@ class CancerImmuneModel:
         self._addImmune(newCell)
         return 2
     
-    def deleteTkiller(self, cell):        
+    def deleteTkiller(self, cell: Tuple[int, int], cDetectionRadius=1):
+        """
+        Check if a T-killer Cell is to be removed, based on the presence of cancer cells nearby and 
+        immune cell crowding
+
+        Args:
+            Cell (Tuple[int, int]): The coordinates of the cell attempting to multiply
+            cDetectionRadius (int): Radius for the moore neighborhood where to detect cancer cells.
+        """
         # Check for cancer cells in the neighborhood.
-        cancer_neighbors = self._neighborlist(cell, lattice=self.cancerLattice, emptyOnly=False, radius=2)
+        cancer_neighbors = self._neighborlist(cell, lattice=self.cancerLattice, emptyOnly=False, radius=cDetectionRadius)
         # If there are cancer cells nearby, do nothing.
         if len(cancer_neighbors) > 0:
             return 0
@@ -206,9 +225,9 @@ class CancerImmuneModel:
         self._addImmune(cell)
 
         if self.cancerLattice[cell[0], cell[1]] and random() <= self.pImmuneKill:
-        # If currently occupying a cell with a cancer cell, randomly kill it. If sucessful, stay, else continue
+        # If currently occupying a cell with a cancer cell, randomly kill it
             self._removeCancer(cell)
-            self.multiTKiller(cell)
+            self.multiTKiller(cell) # Attempt to multiply after killing a cell
             return 1
     
         moves = self._neighborlist(cell, True, lattice=self.immuneLattice)
@@ -251,9 +270,7 @@ class CancerImmuneModel:
         self.immuneCells_t1.remove(cell)
     
     def timestep(self):
-        """
-        Propagates the model by 1 step
-        """ 
+        """Propagates the model by 1 timestep""" 
 
         for cell in self.cancerCells:
             self.propagateCancerCell(cell)
