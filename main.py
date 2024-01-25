@@ -5,12 +5,12 @@ from model.classes.cancerImmuneModel import CancerImmuneModel
 def main():
     """Simple test function that runs the model in visualization mode with set parameters"""
     model = CancerImmuneModel(200, 200, 1.0, 0.01)
-    model.seedCancer(5)
+    model.seedCancer(20)
 
     for i in range(100):
         model.timestep()
 
-    model.seedImmune(round(20 * 20 / 10))
+    model.seedImmune(40)
 
     vis = Visualizer(model)
     vis.run()

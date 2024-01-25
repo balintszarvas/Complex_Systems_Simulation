@@ -39,7 +39,6 @@ class Visualizer:
             # self.ax1.set_xscale("log")
 
 
-
     def run(self):
         ani = FuncAnimation(self.fig, self.frame, frames=None, interval=1, repeat = False)
         plt.show()

@@ -27,7 +27,7 @@ class CancerImmuneModel:
         cancerCells_t1 (Set[Tuple[int, int]]): Set of all cell coordinates containing cancer cells fopr next timestep
         immuneCells_t1 (Set[Tuple[int, int]]): List of all cell coordinates containing immune cells fopr next timestep
     """
-    def __init__(self, length: int, width: int, pImmuneKill = 1.0, pCancerMult = 0.5, pCancerEmergence=0.01, attack_range = 5) -> None:
+    def __init__(self, length: int, width: int, pImmuneKill = 1.0, pCancerMult = 0.5, pCancerEmergence=0.01, attack_range = 5, pfind_cancer = 0.8) -> None:
         """
         initializer function
 
@@ -54,6 +54,7 @@ class CancerImmuneModel:
         self.cluster_sizes = []
         self.cluster_durations = defaultdict(int)
 
+        self.pfind_cancer =  pfind_cancer
         self.pCancerEmergence = pCancerEmergence
 
     def detect_clusters(self):
@@ -268,7 +269,7 @@ class CancerImmuneModel:
         cancer_in_range =self.get_cells_in_range(cell, self.attack_range)
         cancer_in_range =[c for c in cancer_in_range if self.cancerLattice[c[0],c[1]] ==CANCER_CELL]
 
-        if cancer_in_range:
+        if cancer_in_range and np.random.random() < self.pfind_cancer:
             target =min(cancer_in_range, key=lambda c: self.distance(cell, c))
             move =self.get_step_towards(cell, target)
         else:
