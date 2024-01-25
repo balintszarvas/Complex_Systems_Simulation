@@ -13,3 +13,6 @@ def randomTuple(options: List[Tuple[int, int]]) -> Tuple[int, int]:
         choiceID = randint(0, len(options) - 1)
 
     return options[choiceID]
+
+def mooreMaxSize(radius: int, includeSelf = False) -> int:
+    return (2 * radius + 1)**2 - int(includeSelf)
