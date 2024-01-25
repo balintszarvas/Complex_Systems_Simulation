@@ -44,21 +44,22 @@ class Visualizer:
             # self.ax1.set_yscale("log")
             # self.ax1.set_xscale("log")
 
-    def get_equilibrium_2(self):
-        avg_list = []
-        for ind in range(0, len(self.immuneCells)-10, 10):
-            avg = 0
-            for i in range(10):
-                avg += self.immuneCells[ind]
-            avg_list.append(avg)
+    ## posible other code, idk if it works
+    # def get_equilibrium_2(self):
+    #     avg_list = []
+    #     for ind in range(0, len(self.immuneCells)-10, 10):
+    #         avg = 0
+    #         for i in range(10):
+    #             avg += self.immuneCells[ind]
+    #         avg_list.append(avg)
 
-        for ind in range(len(avg_list)):
-            current_value = avg_list[ind]
-            for j in range(i + 1, len(avg_list)):
-                if avg_list[j] < current_value:
-                    self.ind = ind
-                    return 1
-        return 2
+    #     for ind in range(len(avg_list)):
+    #         current_value = avg_list[ind]
+    #         for j in range(i + 1, len(avg_list)):
+    #             if avg_list[j] < current_value:
+    #                 self.ind = ind
+    #                 return 1
+    #     return 2
 
     def get_no_cancer(self):
         for ind in range(len(self.cancerCells)-1):
