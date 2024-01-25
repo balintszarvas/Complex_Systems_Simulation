@@ -61,16 +61,16 @@ class Visualizer:
         return 2
 
     def get_no_cancer(self):
-        for ind, value in enumerate(self.cancerCells):
-            if self.cancerCells[ind] == 0 and self.cancerCells[ind+1] == 0:
+        for ind in range(len(self.cancerCells)-1):
+            if self.cancerCells[ind]*1000 == 0 and self.cancerCells[ind+1]*1000 == 0:
                 return ind
-        return 2
+        return 0
     
     def get_equilibrium(self):
         start = self.get_no_cancer()
+        print(f"start: {start}")
                 
         for ind in range(start, len(self.cancerCells)-10):
-            print(ind)
             if abs(self.cancerCells[ind] - self.cancerCells[ind+10]) < self.threshold:
                 self.ind = ind
                 return 1

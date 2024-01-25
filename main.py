@@ -12,7 +12,7 @@ def main():
 
     model.seedImmune(100)
 
-    threshold_equilibrium = 0.001
+    threshold_equilibrium = 0.0001
     vis = Visualizer(model, threshold_equilibrium)
     vis.run()
     vis.get_equilibrium()
