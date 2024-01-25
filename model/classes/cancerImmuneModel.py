@@ -93,6 +93,10 @@ class CancerImmuneModel:
         """
         Returns a list of neighboring cell coordinates for a given cell using Moore's neighborhood.
 
+        TODO:
+            Move to helpers file? (neighborlist is independent from the actual model and is appropriate
+            to be used as black box method within the class)
+
         Args:
             cell    (Tuple[int, int]): The coordinates of the cell
             periodic           (bool): Wether periodic boundary conditions are enforced
@@ -254,20 +258,20 @@ class CancerImmuneModel:
         """Removes a cell from the cancer lattice and removes it from the future scheduler"""
         if cell not in self.cancerCells_t1:
             print(f"Warning: Specified cancer cell {cell[0]},{cell[1]} not in t1 scheduler")
-        self.cancerLattice[cell[0], cell[1]] = EMPTY # Create new cell on lattice 
+        self.cancerLattice[cell[0], cell[1]] = EMPTY # remove cell from lattice 
         self.cancerCells_t1.remove(cell) # remove cell from scheduler
 
     def _addImmune(self, cell: Tuple[int, int]):
         """Places cell on the immune lattice and adds it to the future scheduler"""
-        self.immuneLattice[cell[0], cell[1]] = TKILLER_CELL
-        self.immuneCells_t1.add(cell)
+        self.immuneLattice[cell[0], cell[1]] = TKILLER_CELL # Create new cell on lattice 
+        self.immuneCells_t1.add(cell) # add new cell to schedule
 
     def _removeImmune(self, cell: Tuple[int, int]):
         """Removes a cell from the immune lattice and removes it from the future scheduler"""
         if cell not in self.immuneCells_t1:
             print(f"Warning: Specified cancer cell {cell[0]},{cell[1]} not in t1 scheduler")
-        self.immuneLattice[cell[0], cell[1]] = EMPTY
-        self.immuneCells_t1.remove(cell)
+        self.immuneLattice[cell[0], cell[1]] = EMPTY # remove cell from lattice 
+        self.immuneCells_t1.remove(cell) # remove cell from scheduler
     
     def timestep(self):
         """Propagates the model by 1 timestep""" 
