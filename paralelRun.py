@@ -11,11 +11,14 @@ from model.classes.cancerImmuneModel import CancerImmuneModel
 from typing import Dict, List, Tuple
 
 # TODO: Rework global constants into parameters
-LEN = 200
-MAX_ITER = 1000
-PROCESSES = 8
-RUNS      = 8
-INTIAL_IMMUNE = LEN**2 * 0.006
+LEN           = 200  # Box lenght
+MAX_ITER      = 1000 # Amount of iterations per model run
+PROCESSES     = 8    # Amount of paralel processes able to run the model
+RUNS          = 8    # Amount of runs to be done
+
+INTIAL_IMMUNE = LEN**2 * 0.006 # Initial amount of immune cells (arbitrary in theory)
+
+# Model parameters
 PARMS = { # Maybe rework into generator function
         "pImmuneKill" : 0.7, 
         "pCancerMult" : 0.05,
@@ -25,6 +28,18 @@ PARMS = { # Maybe rework into generator function
 def main() -> None:
     """
     Parralellized data collection program for CancerImmuneModel
+
+    Measures the occupancy of immune cells as defined by nImmune / boxLength**2 per iteration for a
+    set amount of runs. Average, variance and standard deviation are calculated from this and saved
+    to ./output/temp.CSV.
+
+    Average and standard deviation are plotted in matplotlib and displayed to the user.
+
+    TODO:
+        - Rework global constants into input parameters
+        - Dynamic file naming
+        - Parameter generator function for grid scanning
+        - Input arguments (eg. to disable matplotlib figure display for shell automation)
     """
     t_init = time()
     a = multiprocessing.Pool(PROCESSES)
