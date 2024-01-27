@@ -3,6 +3,7 @@ import numpy as np
 from collections import defaultdict
 import matplotlib.pyplot as plt
 import random
+import powerlaw
 from typing import List, Tuple, Set
 EMPTY       = 0
 CANCER_CELL = 1
@@ -27,7 +28,7 @@ class CancerImmuneModel:
         cancerCells_t1 (Set[Tuple[int, int]]): Set of all cell coordinates containing cancer cells fopr next timestep
         immuneCells_t1 (Set[Tuple[int, int]]): List of all cell coordinates containing immune cells fopr next timestep
     """
-    def __init__(self, length: int, width: int, pImmuneKill = 1.0, pCancerMult = 0.5, pCancerEmergence=0.01, attack_range = 5) -> None:
+    def __init__(self, length: int, width: int, pImmuneKill = 0.8, pCancerMult = 0.5, pCancerEmergence=0.5, attack_range = 2) -> None:
         """
         initializer function
 
@@ -51,6 +52,8 @@ class CancerImmuneModel:
         self.cancerCells_t1:  Set[Tuple[int, int]] = set()
         self.immuneCells_t1:  Set[Tuple[int, int]] = set()
 
+        self.immune_cells_over_time =[]
+
         self.cluster_sizes = []
         self.cluster_durations = defaultdict(int)
 
@@ -61,29 +64,54 @@ class CancerImmuneModel:
         clusters = []
 
         def dfs(cell):
-            if cell in visited or self.cancerLattice[cell[0], cell[1]] !=CANCER_CELL:
+            if self.cancerLattice[cell[0], cell[1]] != CANCER_CELL:
                 return 0
-            visited.add(cell)
-            size=1
-            for neighbor in self._neighborlist(cell):
-                size +=dfs(neighbor)
+            stack = [cell]
+            size = 0
+            while stack:
+                current_cell = stack.pop()
+                if current_cell in visited:
+                    continue
+                visited.add(current_cell)
+                size += 1
+                for neighbor in self._neighborlist(current_cell):
+                    if neighbor not in visited and self.cancerLattice[neighbor[0], neighbor[1]] == CANCER_CELL:
+                        stack.append(neighbor)
             return size
 
         for row in range(self.dim[0]):
             for col in range(self.dim[1]):
-                if (row,col) not in visited and self.cancerLattice[row,col] == CANCER_CELL:
-                    clusters.append(dfs((row,col)))
+                if (row, col) not in visited and self.cancerLattice[row, col] == CANCER_CELL:
+                    clusters.append(dfs((row, col)))
         return clusters
 
+
     def plot_cluster_sizes(self):
-        counts, bin_edges = np.histogram(self.cluster_sizes,bins='auto',density=True)
-        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-        #loglog plot
-        plt.loglog(bin_centers, counts,marker='.', linestyle='none')
-        plt.xlabel('Log of Cluster Size')
-        plt.ylabel('Log of Frequency')
-        plt.title('Log-Log Plot of Cancer Cell Cluster Sizes')
-        plt.show()
+        # Fit the power law to the raw cluster sizes
+        power_results = powerlaw.Fit(self.cluster_sizes)
+        R, p = power_results.distribution_compare('power_law', 'lognormal', normalized_ratio=True)
+
+        # Create a figure and axis for the plot
+        fig, ax = plt.subplots()
+
+        # Plot the PDF using the powerlaw results on the created axis
+        power_results.plot_pdf(ax=ax, color='b', linestyle='-', label='Power law fit')
+        power_results.power_law.plot_pdf(ax=ax, color='r', linestyle='--', label='Fitted power law')
+
+        # Set labels and title using the axis methods
+        ax.set_xlabel('Log of Cluster Size')
+        ax.set_ylabel('Log of Frequency')
+        ax.set_title('Log-Log Plot of Cancer Cell Cluster Sizes')
+
+        # Add text annotation on the plot
+        ax.text(0.3, 0.95, f'Power law vs lognormal={R:.2f} \np-value of fit={p:.2f}', 
+            horizontalalignment='center', verticalalignment='top', 
+            transform=ax.transAxes, bbox={'facecolor': 'white', 'alpha': 0.5})
+
+        # Add legend and show the plot
+        ax.legend()
+        plt.savefig('cluster_sizes.png')
+
 
     def cancer_emergence(self):
         """
@@ -211,6 +239,17 @@ class CancerImmuneModel:
         return 2
 
     def multiTKiller(self, cell):
+        """
+        Creates a new T-Killer cell in a neighboring free space, if the T-Killer cell successfully kills a cancer cell.
+        If no free space is available, it seeds a new immune cell randomly.
+
+        Args:
+            cell (Tuple[int, int]): Coordinates of the T-Killer cell.
+
+        Returns:
+            int: 0 if the cell hasn't killed a cancer cell, 1 if no free space is available for new cell creation,
+                and 2 if a new T-Killer cell is created in the neighborhood.
+        """
         if self.propagateTKiller(cell) != 1:
             return 0
 
@@ -231,6 +270,21 @@ class CancerImmuneModel:
         return 2
 
     def deleteTkiller(self, cell):
+        """
+        Deletes a T-Killer cell if there are no cancer cells in the neighborhood and a random chance condition is met.
+        The T-Killer cell is not deleted if there are any neighboring cancer cells. 
+        If there are no neighboring cancer cells and the simulation still has cancer cells,
+        the T-Killer cell is not deleted. Only if no cancer cells are nearby and the chance condition is met,
+        the T-Killer cell is marked for deletion.
+
+        Args:
+            cell (Tuple[int, int]): Coordinates of the T-Killer cell.
+
+        Returns:
+            int: 0 if the T-Killer cell is not deleted (due to presence of cancer cells or ongoing cancer),
+                1 if the cell is marked for deletion based on the random chance condition,
+                2 as a default return when none of the conditions are met.
+        """
         # Check for cancer cells in the neighborhood.
         cancer_neighbors = self._neighborlist(cell, lattice=self.cancerLattice, emptyOnly=False)
         tkiller_neighbors = self._neighborlist(cell, lattice=self.immuneLattice, emptyOnly=False)
@@ -280,7 +334,6 @@ class CancerImmuneModel:
 
         self._removeImmune(cell)
         self._addImmune(move)
-        self.deleteTkiller(move)
         return 2
 
     def distance(self, cell1, cell2):
@@ -340,6 +393,73 @@ class CancerImmuneModel:
         self.immuneLattice[cell[0], cell[1]] = EMPTY
         self.immuneCells_t1.remove(cell)
 
+    def get_equilibrium(self):
+        """
+        Returns the equilibrium of the system, i.e. the relative averge amount of immune cells after the system has reached a steady state. 
+        Steady state is defined as when the moving average over 100 timesteps stays within 1% of the previous moving average.
+
+        Returns:
+            float: The equilibrium of the system: fraction of immune cells in the system.
+        """
+        # Calculate the moving average over 100 timesteps
+        moving_average = np.convolve(self.immune_cells_over_time, np.ones(100), 'valid') / 100
+
+        # Calculate the difference between the moving average and the previous moving average
+        differences = np.diff(moving_average)
+
+        # Calculate the percentage change between the moving average and the previous moving average
+        percentage_change = np.abs(differences / moving_average[:-1])
+
+        # Find the index of the first timestep where the percentage change is less than 1%
+        equilibrium_index = np.where(percentage_change < 0.01)[0][0]
+
+        return moving_average[equilibrium_index], equilibrium_index
+    
+    def get_avalanche_sizes(self):
+        """
+        Returns a list of deviations from the equilibrium of the system after the system has reached a steady state.
+        The deviations are measured by the amount of immune cells in the system.
+        """
+        equilibrium, equilibrium_index = self.get_equilibrium()
+        avalanche_sizes = []
+
+        # Calculate deviations from the equilibrium
+        for i in range(equilibrium_index, len(self.immune_cells_over_time)):
+            avalanche_sizes.append(np.abs(self.immune_cells_over_time[i] - equilibrium))
+
+        return avalanche_sizes
+    
+    def plot_avalanche_sizes(self):
+        """
+        Plots the frequency of avalanche sizes of the system after the system has reached a steady state.
+        """
+        avalanche_sizes = self.get_avalanche_sizes()
+
+        # Fit the power law to the avalanche sizes
+        power_avalanche_results = powerlaw.Fit(avalanche_sizes)
+        R, p = power_avalanche_results.distribution_compare('power_law', 'lognormal', normalized_ratio=True)
+
+        # Create a figure and axis for the plot
+        fig, ax = plt.subplots()
+
+        # Plot the PDF using the powerlaw results on the created axis
+        power_avalanche_results.plot_pdf(ax=ax, color='b', linestyle='-', label='Power law fit')
+        power_avalanche_results.power_law.plot_pdf(ax=ax, color='r', linestyle='--', label='Fitted power law')
+
+        # Set labels and title using the axis methods
+        ax.set_xlabel('Log of Avalanche Size')
+        ax.set_ylabel('Log of Frequency')
+        ax.set_title('Log-Log Plot of Avalanche Sizes')
+
+        # Add text annotation on the plot
+        ax.text(0.3, 0.95, f'Power law vs lognormal={R:.2f} \np-value of fit={p:.2f}', 
+            horizontalalignment='center', verticalalignment='top', 
+            transform=ax.transAxes, bbox={'facecolor': 'white', 'alpha': 0.5})
+
+        # Add legend and show the plot
+        ax.legend()
+        plt.savefig('avalanche_sizes.png')
+
 
     def timestep(self):
         """
@@ -358,6 +478,9 @@ class CancerImmuneModel:
         self.immuneCells_t1 = set()
 
         self.cancer_emergence()
+
+        immune_cells_at_this_step = self.get_nImmuneCells()
+        self.immune_cells_over_time.extend([immune_cells_at_this_step])
 
         cluster_sizes_at_this_step = self.detect_clusters()
         self.cluster_sizes.extend(cluster_sizes_at_this_step)
