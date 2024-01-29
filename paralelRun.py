@@ -65,9 +65,6 @@ Usage:
 
             A list structure can also be entered, which makes the program loop through all possible
             combinations of these parameters.
-
-    TODO:
-    - Plotting the parameter scan.
 """
 
 
