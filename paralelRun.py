@@ -81,10 +81,22 @@ INITIAL_IMMUNE = 0.006 # Initial amount of immune cells (arbitrary in theory)
 
 # Model parameters
 PARMS = { # Maybe rework into generator function
-        "pImmuneKill" : 0.7, 
-        "pCancerMult" : 0.05,
-        "pCancerSpawn": 0.01
-    }
+        "pImmuneKill" : [0.5],
+        "pCancerMult" : [0.4, 0.5, 0.6],
+        "pCancerSpawn": [0.1],
+        }
+
+def parScan():
+    """Loop through possible parameters"""
+    for cancermulti in PARMS["pCancerMult"]:
+        for immunekill in PARMS["pImmuneKill"]:
+            for cancerspawn in PARMS["pCancerSpawn"]:
+                for initial_imm in INITIAL_IMMUNE:
+                    current_parms = {
+                        "pCancerMult": cancermulti,
+                        "pImmuneKill": immunekill,
+                        "pCancerSpawn": cancerspawn
+                    }
 
 def paralelRun(maxIter=MAX_ITER, parms = PARMS, runs = RUNS, processes = PROCESSES, boxLen = LEN, immuneFrac = INITIAL_IMMUNE) -> None:
     """
@@ -96,6 +108,7 @@ def paralelRun(maxIter=MAX_ITER, parms = PARMS, runs = RUNS, processes = PROCESS
 
     Average and standard deviation are plotted in matplotlib and displayed to the user.
     """
+    
     t_init = time()
     a = multiprocessing.Pool(processes)
 
@@ -104,10 +117,7 @@ def paralelRun(maxIter=MAX_ITER, parms = PARMS, runs = RUNS, processes = PROCESS
     print(f"Running {runs} simulations over {processes} processes")
     output = a.starmap(runOnce, input)    
     print(f"Total model runtime: {time() - t_init}")
-
-    t_init = time()
-    # output = a.map(par_avgResults, zip(*output)) # Parralellized output processing
-    output = avgResults(output)                    # Sequential output processing
+    output = avgResults(output)
     print(f"Total result processing runtime: {time() - t_init}")
 
     return output
@@ -118,47 +128,55 @@ def runOnce(maxIter: int, parms: Dict[str, float], boxLen: int, immuneFrac: floa
     Runs the model once for the given parameter.
     
     Args:
-        maxIter           (int): The amount of iterations to run the model for
-        parms (Dict[str,float]): Key-value pairs for the initializer described in .model.cancerImmuneModel
-                                 barring length and with.
-    
-    Returns (List[float]): Immune cell ocupancy relative to the surface of the lattice
+        maxIter (int): The amount of iterations to run the model for.
+        INTIAL_IMMUNE (float): Initial amount of immune cells.
+        parms (Dict[str, float]): Model parameters (pCancerMult, pImmuneKill, pCancerSpawn).
+
+    Returns:
+        Dict[str, List[float]]: A dictionary with keys "Immune" and "Cancer", each containing a list of cell occupancy values.
     """
     parms = copy(parms)
     model = CancerImmuneModel(boxLen, boxLen, **parms)
     model.seedImmune(round(boxLen**2 * immuneFrac))
-    vals = []
+    vals = {"Immune": [], "Cancer": []}
     for iter in range(maxIter):
         model.timestep()
-        vals.append(model.get_nImmuneCells() / boxLen**2)
+        vals["Immune"].append(model.get_nImmuneCells() / boxLen**2)
+        vals["Cancer"].append(model.get_nCancerCells() / boxLen**2)
 
     return vals
 
 
-def avgResults(plots: List[List[float]]) -> List[Tuple[float, float, float]]:
+def calculate_statistics(values: List[float]) -> Tuple[float, float, float]:
     """
-    Calculates the average, variance and standard deviation for every iteration of every run.
+    Calculates statistical measures for a given list of values.
 
     Args:
-        plots (List[List[float]]): List containing the list of Immune cell ocupancy relative to the 
-                                   surface of the lattice for every run.
-    
-    Returns List[Tuple[float, float, float]]: A list of tuples containing the average occupation,
-        the variance and the standard deviation for every iteration.
+        values (List[float]): List of numerical values.
 
+    Returns:
+        Tuple[float, float, float]: A tuple containing the average, variance, and standard deviation of the input values.
     """
-    output: List[Tuple[float]] = []
-    for step in zip(*plots):
-        average = sum(step) / len(step)
+    average = sum(values) / len(values)
+    variance = sum((x - average) ** 2 for x in values) / len(values)
+    st_dev = sqrt(variance)
+    return average, variance, st_dev
 
-        sumOfSquares = 0
-        for point in step:
-             sumOfSquares += (point - average)**2
-        variance = sumOfSquares / len(step)
-        stDev    = sqrt(variance)
+def avgResults(plots: List[Dict[str, List[float]]]) -> Dict[str, List[Tuple[float, float, float]]]:
+    """
+    Computes average, variance, and standard deviation for each iteration of model runs.
 
-        output.append((average, variance, stDev))
-    return output
+    Args:
+        plots (List[Dict[str, List[float]]]): List of dictionaries containing model results for "Immune" and "Cancer" cell types.
+
+    Returns:
+        Dict[str, List[Tuple[float, float, float]]]: A dictionary with keys "Immune" and "Cancer", each containing a list of tuples (average, variance, standard deviation).
+    """
+    results = {}
+    for key in plots[0].keys():
+        key_values = [plot[key] for plot in plots]
+        results[key] = [calculate_statistics(step) for step in zip(*key_values)]
+    return results
 
 
 def par_avgResults(step: Tuple[float]) -> Tuple[float, float, float]:
@@ -183,48 +201,59 @@ def par_avgResults(step: Tuple[float]) -> Tuple[float, float, float]:
     return average, variance, stDev
 
 
-def multiPlot(plot: List[Tuple[float, float, float]]) -> None:
+def multiPlot(results: List[Dict[str, List[Tuple[float, float, float]]]]) -> None:
     """
-    Plots the average occupation and standard deviation per iteration.
+    Plots the results of model simulations.
 
     Args:
-        plot [List[Tuple[float, float, float]]]: A list of tuples containing the average occupation,
-        the variance and the standard deviation for every iteration.
+        plot (List[Dict[str, List[Tuple[float, float, float]]]]): The calculated statistics for immune and cancer cell occupancy.
+
+    Returns:
+        None: This function does not return anything but plots the results.
     """
-    fig, ax = plt.subplots()
-    assert isinstance(ax, plt.Axes)
+    fig, axs = plt.subplots(1, len(results))
 
-    iters = list(range(len(plot)))
-    average = [average           for average, variance, stDev in plot]
-    hi      = [average + stDev   for average, variance, stDev in plot]
-    lo      = [average - stDev   for average, variance, stDev in plot]
+    for i, result in enumerate(results):
+        for cell_type in result:
+            iters = range(len(result[cell_type]))
+            averages = [avg for avg, _, _ in result[cell_type]]
+            std_devs = [std_dev for _, _, std_dev in result[cell_type]]
 
-    ax.plot(iters, average, label="Average")
-    ax.fill_between(iters, lo, hi, label='Standard deviation', alpha=0.5)
-    ax.set_ylabel("Immune Cell occupancy")
-    ax.set_xlabel("Iteration")
-    ax.legend()
+            axs[i].plot(iters, averages, label=f"{cell_type} Average")
+            axs[i].fill_between(iters, 
+                                [a - s for a, s in zip(averages, std_devs)],
+                                [a + s for a, s in zip(averages, std_devs)],
+                                alpha=0.5, label=f"{cell_type} Std Dev")
+
+        axs[i].set_title(f"Run {i+1}")
+        axs[i].set_xlabel("Iteration")
+        axs[i].set_ylabel("Cell occupancy")
+        axs[i].legend()
+
+    plt.tight_layout()
     plt.show()
 
 
 def saveResults(plot: List[Tuple[float, float, float]], filename: str, parms: Dict[str, float], runs: int, maxIter: int) -> None:
     """
-    Saves the calculated results to ./output/TEMP.csv
-    
+    Saves the calculated results to a CSV file.
+
     Args:
         plot (List[Tuple[float, float, float]]): A list of tuples containing the average occupation,
             the variance and the standard deviation for every iteration.
     """
-    os.makedirs("output", exist_ok=True)
+    os.makedirs("Output", exist_ok=True)
 
     with open("output/TEMP.csv", "w") as outFile:
           
         outFile.write(f"{parms}\n")
         outFile.write(f"{runs} runs over {maxIter} iterations\n")
         outFile.write("\n")
-        outFile.write("Average, Variance, StdDef\n")
-        for (avg, var, stdDef) in plot:
-            outFile.write(f"{avg}, {var}, {stdDef}\n")
+        outFile.write("AverageImmune, VarianceImmune, StdDefImmune, AverageCancer, VarianceCancer, StdDefCancer\n")
+        for CellType in plot.keys():
+            for (avg, var, stdDef) in plot[CellType]:
+                outFile.write(f"{avg}, {var}, {stdDef}")
+            outFile.write('\n')
         outFile.write("\n")
     return
 
