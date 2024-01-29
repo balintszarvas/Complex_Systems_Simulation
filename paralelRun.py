@@ -173,7 +173,9 @@ def calculate_statistics(values: List[Tuple[float, float]]) -> Tuple[float, floa
     """
     # Split List of Per run tuples of per cell tuples up into List of Per cell Lists of per run lists 
     immune   = [[item[0] for item in point] for point in values]
+    immune   = list(zip(*immune))
     bacteria = [[item[1] for item in point] for point in values]
+    bacteria = list(zip(*bacteria))
     plots    = []
 
     for pointImm, pointBac in zip(immune, bacteria):
