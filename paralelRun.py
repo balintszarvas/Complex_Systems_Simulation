@@ -5,6 +5,7 @@ import os
 
 import multiprocessing
 import matplotlib.pyplot as plt
+import numpy as np
 
 from model.classes.cancerImmuneModel import CancerImmuneModel
 
@@ -73,7 +74,7 @@ Usage:
 
 
 LEN           = 200  # Box lenght
-MAX_ITER      = 10 # Amount of iterations per model run
+MAX_ITER      = 1000 # Amount of iterations per model run
 PROCESSES     = 4    # Amount of paralel processes able to run the model
 RUNS          = 4    # Amount of runs to be done
 DEF_FILENAME  = "TEMP"
@@ -132,13 +133,14 @@ def paralelRun(maxIter:int, parms: Dict[str, float], runs: int, processes: int, 
     print(f"Running {runs} simulations of {maxIter} iterations over {processes} processes")
     output = a.starmap(runOnce, input)    
     print(f"Total model runtime: {time() - t_init}")
+    t_init = time()
     output = calculate_statistics(output)
     print(f"Total result processing runtime: {time() - t_init}")
 
     return output
 
 
-def runOnce(maxIter: int, parms: Dict[str, float], boxLen: int, immuneFrac: float) -> List[Tuple[float, float]]:
+def runOnce(maxIter: int, parms: Dict[str, float], boxLen: int, immuneFrac: float) -> np.ndarray[float]:
     """
     Runs the model once for the given parameter.
     
@@ -147,20 +149,21 @@ def runOnce(maxIter: int, parms: Dict[str, float], boxLen: int, immuneFrac: floa
         INTIAL_IMMUNE (float): Initial amount of immune cells.
         parms (Dict[str, float]): Model parameters (pCancerMult, pImmuneKill, pCancerSpawn).
 
-    Returns (List[Tuple[float]]): A list of tuples containing a list of immune and bacteria occupancy values.
+    Returns (np.ndarray): A 2 x maxIter array with immune cell data in the left collumn and bacterial
+        cell data in the right.
     """
     parms = copy(parms)
     model = CancerImmuneModel(boxLen, boxLen, **parms)
     model.seedImmune(round(boxLen**2 * immuneFrac))
-    vals: List[Tuple[float, float]] = []
+    vals: np.ndarray[float] = np.ndarray((2,maxIter), float)
     for iter in range(maxIter):
         model.timestep()
-        point = (model.get_nImmuneCells() / boxLen**2, model.get_nCancerCells() / boxLen**2)
-        vals.append(point)
+        vals[0, iter] = model.get_nImmuneCells() / boxLen**2
+        vals[1, iter] = model.get_nCancerCells() / boxLen**2
     return vals
 
 
-def calculate_statistics(values: List[Tuple[float, float]]) -> Tuple[float, float, float, float, float, float]:
+def calculate_statistics(values: np.ndarray) -> List[Tuple[float, float, float, float, float, float]]:
     """
     Calculates statistical measures for a given list of values.
 
@@ -172,9 +175,9 @@ def calculate_statistics(values: List[Tuple[float, float]]) -> Tuple[float, floa
         of the input values.
     """
     # Split List of Per run tuples of per cell tuples up into List of Per cell Lists of per run lists 
-    immune   = [[item[0] for item in point] for point in values]
+    immune   = [point[0,:] for point in values]
     immune   = list(zip(*immune))
-    bacteria = [[item[1] for item in point] for point in values]
+    bacteria = [point[1,:] for point in values]
     bacteria = list(zip(*bacteria))
     plots    = []
 
