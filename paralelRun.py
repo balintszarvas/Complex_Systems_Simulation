@@ -14,8 +14,9 @@ from typing import Dict, List, Tuple
 """
 Usage:
     To plot an earlier result, run the program like:
-        `python paralelRun.py p [FILEPATH]`
-    
+        `python paralelRun.py p [FILEPATH] [PLOTNAME: optional]`
+            FILEPATH   - Path of the exported CSV file.
+            PLOTNAME   - Title for the plotted image
         
     To run an experiment with default settings, run the program as:
         `python paralelRun.py`
