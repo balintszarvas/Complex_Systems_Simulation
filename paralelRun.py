@@ -352,22 +352,23 @@ if __name__ == "__main__":
         processes  = PROCESSES
         boxLen     = LEN
         immuneFrac = INITIAL_IMMUNE
+        plotTitle  = DEF_FILENAME
         parms      = PARMS
         noPlot     = False
-    
+
+        
         if len(args) > 1:
             # Plotting past results:
             if args[1].lower() in ['p', 'plot']:
                 mode = PLOT
                 filename = args[2]
             
-            if len(args) > 3:
-                plotTitle = args[3]
+                if len(args) > 3:
+                    plotTitle = args[3]
 
             # Run parallel program
             else:
                 args.pop(0)
-
                 if args[0].isnumeric():
                     runs      = int(args.pop(0))
                 if len(args) > 0 and args[0].isnumeric():
@@ -397,7 +398,6 @@ if __name__ == "__main__":
                             mode = PARAMETER_SCAN
                         else:
                             parms[key] = float(val)
-
         return mode, maxIter, parms, runs, processes, boxLen, immuneFrac, filename, plotTitle, noPlot
 
     main(argv)
