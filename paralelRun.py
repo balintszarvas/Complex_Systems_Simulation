@@ -211,24 +211,21 @@ def multiPlot(results: List[Dict[str, List[Tuple[float, float, float]]]]) -> Non
     Returns:
         None: This function does not return anything but plots the results.
     """
-    fig, axs = plt.subplots(1, len(results))
+    fig, ax = plt.subplots()
 
-    for i, result in enumerate(results):
-        for cell_type in result:
-            iters = range(len(result[cell_type]))
-            averages = [avg for avg, _, _ in result[cell_type]]
-            std_devs = [std_dev for _, _, std_dev in result[cell_type]]
+    iters = range(len(results))
+    averages = [avg for avg, _, _ in results]
+    std_devs = [std_dev for _, _, std_dev in results]
 
-            axs[i].plot(iters, averages, label=f"{cell_type} Average")
-            axs[i].fill_between(iters, 
-                                [a - s for a, s in zip(averages, std_devs)],
-                                [a + s for a, s in zip(averages, std_devs)],
-                                alpha=0.5, label=f"{cell_type} Std Dev")
+    ax.plot(iters, averages, label=f"Average")
+    ax.fill_between(iters, 
+                        [a - s for a, s in zip(averages, std_devs)],
+                        [a + s for a, s in zip(averages, std_devs)],
+                        alpha=0.5, label=f"Std Dev")
 
-        axs[i].set_title(f"Run {i+1}")
-        axs[i].set_xlabel("Iteration")
-        axs[i].set_ylabel("Cell occupancy")
-        axs[i].legend()
+    ax.set_xlabel("Iteration")
+    ax.set_ylabel("Cell occupancy")
+    ax.legend()
 
     plt.tight_layout()
     plt.show()
