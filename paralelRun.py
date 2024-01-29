@@ -53,6 +53,9 @@ Usage:
         ["immunefraction", "fractionimmune","immunefrac", "if", "frac", "f"]=(float)
         - The fraction of cells to be occupied by immune cells in the initial state of the model.
         
+        ["noplot"]=(bool)
+        - disable plotting of results afterwards
+        
         case sensitive model parameters:
             pImmuneKill=(float/list[float])
             - The chance an immune cell kills a cancer cell it occupies the same cell as.
