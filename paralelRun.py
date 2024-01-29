@@ -14,7 +14,7 @@ from typing import Dict, List, Tuple
 LEN           = 100  # Box lenght
 MAX_ITER      = 200 # Amount of iterations per model run
 PROCESSES     = 8    # Amount of paralel processes able to run the model
-RUNS          = 10    # Amount of runs to be done
+RUNS          = 5    # Amount of runs to be done
 
 INTIAL_IMMUNECELL = [0.1] # Initial amount of immune cells (arbitrary in theory)
 
@@ -56,32 +56,32 @@ def main() -> None:
                         "pImmuneKill": immunekill,
                         "pCancerSpawn": cancerspawn
                     }
-                    INTIAL_IMM = initial_imm * LEN**2
+                    INTIAL_IMMUNE = initial_imm * LEN**2
 
-                    input = [(MAX_ITER, INTIAL_IMM, current_parms) for i in range(RUNS)]
+                    input = [(MAX_ITER, INTIAL_IMMUNE, current_parms) for i in range(RUNS)]
                     output = a.starmap(runOnce, input)
                     output = avgResults(output)
                     results.append(output)
 
     multiPlot(results)
-    phasePlot(results)
     print(f"Total result processing runtime: {time() - t_init}")
 
 
-def runOnce(maxIter: int, INTIAL_IMMUNE, parms: Dict[str, float]) -> Dict[float, float]:
+def runOnce(maxIter: int, initial_immune: float, parms: Dict[str, float]) -> Dict[str, List[float]]:
     """
     Runs the model once for the given parameter.
     
     Args:
-        maxIter           (int): The amount of iterations to run the model for
-        parms (Dict[str,float]): Key-value pairs for the initializer described in .model.cancerImmuneModel
-                                 barring length and with.
-    
-    Returns (Dict[float]): Immune cell and cancer cell occupancy relative to the surface of the lattice
+        maxIter (int): The amount of iterations to run the model for.
+        INTIAL_IMMUNE (float): Initial amount of immune cells.
+        parms (Dict[str, float]): Model parameters (pCancerMult, pImmuneKill, pCancerSpawn).
+
+    Returns:
+        Dict[str, List[float]]: A dictionary with keys "Immune" and "Cancer", each containing a list of cell occupancy values.
     """
     parms = copy(parms)
     model = CancerImmuneModel(LEN, LEN, **parms)
-    model.seedImmune(round(INTIAL_IMMUNE))
+    model.seedImmune(round(initial_immune))
     vals = {"Immune": [], "Cancer": []}
     for iter in range(maxIter):
         model.timestep()
@@ -169,32 +169,9 @@ def multiPlot(results: List[Dict[str, List[Tuple[float, float, float]]]]) -> Non
                                 [a + s for a, s in zip(averages, std_devs)],
                                 alpha=0.5, label=f"{cell_type} Std Dev")
 
-        axs[i].set_ylim(0, 1)
         axs[i].set_title(f"Run {i+1}")
         axs[i].set_xlabel("Iteration")
         axs[i].set_ylabel("Cell occupancy")
-        axs[i].legend()
-
-    plt.tight_layout()
-    plt.show()
-
-def phasePlot(results: List[Dict[str, List[Tuple[float, float, float]]]]) -> None:
-    """
-    Plots the cell fractions against each other with initial conditions to show phase space and find fixed points.
-    The x axis is the cancer cell fraction and the y axis is the immune cell fraction.
-    """
-    fig, axs = plt.subplots(1, len(results))
-
-    for i, result in enumerate(results):
-        cancer_averages = [avg for avg, _, _ in result["Cancer"]]
-        immune_averages = [avg for avg, _, _ in result["Immune"]]
-
-        axs[i].set_ylim(0, 1)
-        axs[i].set_xlim(0, 1)
-        axs[i].plot(cancer_averages, immune_averages, label="Cancer vs Immune")
-        axs[i].set_xlabel("Cancer Cell Fraction")
-        axs[i].set_ylabel("Immune Cell Fraction")
-        axs[i].set_title(f"Run {i+1}")
         axs[i].legend()
 
     plt.tight_layout()
