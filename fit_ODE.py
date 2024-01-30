@@ -123,6 +123,16 @@ def toMinimize(x: np.array, dt, immune: List[float], bacteria: List[float]):
 def fitODE(immuneCells, bacterialCells, xGuess, dt = DT) -> np.ndarray:
     return spopt.minimize(toMinimize, xGuess, (dt, immuneCells, bacterialCells))
 
+def fun_cons_alpha(x,*args):
+    return x[ALPHA]
+def fun_cons_beta(x, *args):
+    return x[BETA]
+def fun_cons_gamma(x, *args):
+    return x[GAMMA]
+def fun_cons_spawn(x, *args):
+    return x[SPAWN]
+
+cons_alpha = {"type": "ineq", "fun": fun_cons_alpha} 
 
 def main(filename = FILENAME, xGuess: np.ndarray = X_GUESS):
     data = readData(filename)
