@@ -152,7 +152,7 @@ class CancerImmuneModel:
             # Stop if cell will not multiply
             return 0
         
-        neighbors = self._neighborlist(cell, lattice=self.cancerLattice)
+        neighbors = self._neighborlist(cell, lattice=self.cancerLattice, periodic=True)
 
         if not neighbors:
             # Stop multiplication attempt if there are no free spaces in neighborhood

@@ -6,6 +6,7 @@ import json
 
 import multiprocessing
 import matplotlib.pyplot as plt
+import numpy as np
 
 from model.classes.cancerImmuneModel import CancerImmuneModel
 
@@ -15,8 +16,9 @@ from typing import Dict, List, Tuple
 """
 Usage:
     To plot an earlier result, run the program like:
-        `python paralelRun.py p [FILEPATH]`
-    
+        `python paralelRun.py p [FILEPATH] [PLOTNAME: optional]`
+            FILEPATH   - Path of the exported CSV file.
+            PLOTNAME   - Title for the plotted image
         
     To run an experiment with default settings, run the program as:
         `python paralelRun.py`
@@ -54,6 +56,9 @@ Usage:
         ["immunefraction", "fractionimmune","immunefrac", "if", "frac", "f"]=(float)
         - The fraction of cells to be occupied by immune cells in the initial state of the model.
         
+        ["noplot"]=(bool)
+        - disable plotting of results afterwards
+        
         case sensitive model parameters:
             pImmuneKill=(float/list[float])
             - The chance an immune cell kills a cancer cell it occupies the same cell as.
@@ -66,14 +71,11 @@ Usage:
 
             A list structure can also be entered, which makes the program loop through all possible
             combinations of these parameters.
-
-    TODO:
-    - Plotting the parameter scan.
 """
 
 
 LEN           = 200  # Box lenght
-MAX_ITER      = 10 # Amount of iterations per model run
+MAX_ITER      = 1000 # Amount of iterations per model run
 PROCESSES     = 4    # Amount of paralel processes able to run the model
 RUNS          = 4    # Amount of runs to be done
 DEF_FILENAME  = "TEMP"
@@ -131,13 +133,14 @@ def paralelRun(maxIter:int, parms: Dict[str, float], runs: int, processes: int, 
     print(f"Running {runs} simulations of {maxIter} iterations over {processes} processes")
     output = a.starmap(runOnce, input)    
     print(f"Total model runtime: {time() - t_init}")
+    t_init = time()
     output = calculate_statistics(output)
     print(f"Total result processing runtime: {time() - t_init}")
 
     return output
 
 
-def runOnce(maxIter: int, parms: Dict[str, float], boxLen: int, immuneFrac: float) -> List[Tuple[float, float]]:
+def runOnce(maxIter: int, parms: Dict[str, float], boxLen: int, immuneFrac: float) -> np.ndarray[float]:
     """
     Runs the model once for the given parameter.
     
@@ -146,20 +149,21 @@ def runOnce(maxIter: int, parms: Dict[str, float], boxLen: int, immuneFrac: floa
         INTIAL_IMMUNE (float): Initial amount of immune cells.
         parms (Dict[str, float]): Model parameters (pCancerMult, pImmuneKill, pCancerSpawn).
 
-    Returns (List[Tuple[float]]): A list of tuples containing a list of immune and bacteria occupancy values.
+    Returns (np.ndarray): A 2 x maxIter array with immune cell data in the left collumn and bacterial
+        cell data in the right.
     """
     parms = copy(parms)
     model = CancerImmuneModel(boxLen, boxLen, **parms)
     model.seedImmune(round(boxLen**2 * immuneFrac))
-    vals: List[Tuple[float, float]] = []
+    vals: np.ndarray[float] = np.ndarray((2,maxIter), float)
     for iter in range(maxIter):
         model.timestep()
-        point = (model.get_nImmuneCells() / boxLen**2, model.get_nCancerCells() / boxLen**2)
-        vals.append(point)
+        vals[0, iter] = model.get_nImmuneCells() / boxLen**2
+        vals[1, iter] = model.get_nCancerCells() / boxLen**2
     return vals
 
 
-def calculate_statistics(values: List[Tuple[float, float]]) -> Tuple[float, float, float, float, float, float]:
+def calculate_statistics(values: np.ndarray) -> List[Tuple[float, float, float, float, float, float]]:
     """
     Calculates statistical measures for a given list of values.
 
@@ -171,8 +175,10 @@ def calculate_statistics(values: List[Tuple[float, float]]) -> Tuple[float, floa
         of the input values.
     """
     # Split List of Per run tuples of per cell tuples up into List of Per cell Lists of per run lists 
-    immune   = [[item[0] for item in point] for point in values]
-    bacteria = [[item[1] for item in point] for point in values]
+    immune   = [point[0,:] for point in values]
+    immune   = list(zip(*immune))
+    bacteria = [point[1,:] for point in values]
+    bacteria = list(zip(*bacteria))
     plots    = []
 
     for pointImm, pointBac in zip(immune, bacteria):
@@ -201,6 +207,7 @@ def multiPlot(results: List[Tuple[float, float, float, float]], plotTitle= None)
         None: This function does not return anything but plots the results.
     """
     fig, ax = plt.subplots()
+    assert isinstance(ax, plt.Axes)
 
     iters = range(len(results))
     averagesI = [avgI    for avgI, varI, stdDevI, avgB, varB, stdDevB in results]
@@ -276,39 +283,37 @@ def saveResults(plot: List[Tuple[float, float, float]], filename: str, parms: Di
         outFile.write("\n")
     return
 
+def readData(filename: str) -> List[Tuple[float, float, float, float, float]]:
+        """
+        Reads result datafile and returns it in a format usable by multiplot.
+        
+        Args:
+            filename (str): The filename of the resultfile
+        
+        Returns (List[Tuple[float, float, float]]): A list of tuples containing the average occupation,
+            the variance and the standard deviation for every iteration.
 
-def readData(filename: str) -> List[Tuple[float, float, float]]:
-    """
-    Reads result datafile and returns it in a format usable by multiplot.
-    
-    Args:
-        filename (str): The filename of the resultfile
-    
-    Returns (List[Tuple[float, float, float]]): A list of tuples containing the average occupation,
-        the variance and the standard deviation for every iteration.
+        """
+        output = []
 
-    """
-    output = []
+        if not ".csv" in filename:
+            filename = f"{filename}.csv"
 
-    if not ".csv" in filename:
-        filename = f"{filename}.csv"
+        with open(filename, newline=None) as resultFile:
+            line = resultFile.readline().replace("'", '"')
+            parms = json.loads(line)
 
-    with open(filename, newline=None) as resultFile:
-        line = resultFile.readline().replace("'", '"')
-        parms = json.loads(line)
-
-        while line != "\n":
+            while line != "\n":
+                line = resultFile.readline()
+            resultFile.readline()
             line = resultFile.readline()
-        resultFile.readline()
-        line = resultFile.readline()
 
-        while line != None and line != "\n":
-            splitline = line.split(',')
-            output.append(tuple([float(item) for item in splitline]))
-            line = resultFile.readline()
-    
-    return output
-    
+            while line != None and line != "\n":
+                splitline = line.split(',')
+                output.append(tuple([float(item) for item in splitline]))
+                line = resultFile.readline()
+        
+        return output
 
 if __name__ == "__main__":
     from sys import argv
@@ -352,29 +357,29 @@ if __name__ == "__main__":
         processes  = PROCESSES
         boxLen     = LEN
         immuneFrac = INITIAL_IMMUNE
+        plotTitle  = DEF_FILENAME
         parms      = PARMS
         noPlot     = False
-        plotTitle  = DEF_FILENAME
-    
+
+        
         if len(args) > 1:
             # Plotting past results:
             if args[1].lower() in ['p', 'plot']:
                 mode = PLOT
                 filename = args[2]
             
-            if len(args) > 3:
-                plotTitle = args[3]
+                if len(args) > 3:
+                    plotTitle = args[3]
 
             # Run parallel program
-        else:
-            args.pop(0)
-
-            if args[0].isnumeric():
-                runs      = int(args.pop(0))
-            if len(args) > 0 and args[0].isnumeric():
-                maxIter   = int(args.pop(0))
-            if len(args) > 0 and args[0].isnumeric():
-                processes = int(args.pop(0))
+            else:
+                args.pop(0)
+                if args[0].isnumeric():
+                    runs      = int(args.pop(0))
+                if len(args) > 0 and args[0].isnumeric():
+                    maxIter   = int(args.pop(0))
+                if len(args) > 0 and args[0].isnumeric():
+                    processes = int(args.pop(0))
 
             for key, val in [item.split('=') for item in args]:
                 if   key.lower() in ["filename", "fn", "name", "n"]:
@@ -397,8 +402,11 @@ if __name__ == "__main__":
                         parms[key] = json.loads(val)
                         mode = PARAMETER_SCAN
                     else:
-                        parms[key] = float(val)
-
+                        if "[" in val:
+                            parms[key] = json.loads(val)
+                            mode = PARAMETER_SCAN
+                        else:
+                            parms[key] = float(val)
         return mode, maxIter, parms, runs, processes, boxLen, immuneFrac, filename, plotTitle, noPlot
 
     main(argv)
