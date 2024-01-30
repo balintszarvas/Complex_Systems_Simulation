@@ -2,6 +2,7 @@ from copy import copy
 from math import sqrt
 from time import time, sleep
 import os
+import json
 
 import multiprocessing
 import matplotlib.pyplot as plt
@@ -207,6 +208,7 @@ def multiPlot(results: List[Tuple[float, float, float, float]], plotTitle= None)
         None: This function does not return anything but plots the results.
     """
     fig, ax = plt.subplots()
+    assert isinstance(ax, plt.Axes)
 
     iters = range(len(results))
     averagesI = [avgI    for avgI, varI, stdDevI, avgB, varB, stdDevB in results]
@@ -282,37 +284,7 @@ def saveResults(plot: List[Tuple[float, float, float]], filename: str, parms: Di
         outFile.write("\n")
     return
 
-if __name__ == "__main__":
-    from sys import argv
-    import json
-
-    RUN_SINGLE_PARM = 0
-    PLOT = 1
-    PARAMETER_SCAN = 2
-
-    def main(args: List[str]):
-        """
-        Main function, see file docstring
-        
-        Takes argv as input.
-        """
-        mode, maxIter, parms, runs, processes, boxLen, immuneFrac, filename, plotTitle, noPlot = parseArgv(args)
-        if mode == PLOT:
-            multiPlot(readData(filename), plotTitle)
-            return
-        elif mode == PARAMETER_SCAN:
-            output = parScan(maxIter, parms, runs, processes, boxLen, immuneFrac, filename)
-            if not noPlot:
-                multiMultiplot(*output)
-            return
-        output = paralelRun(maxIter, parms, runs, processes, boxLen, immuneFrac)
-        saveResults(output, filename, parms, runs, maxIter)
-        if not noPlot:
-            multiPlot(output)
-        return output
-    
-
-    def readData(filename: str) -> List[Tuple[float, float, float]]:
+def readData(filename: str) -> List[Tuple[float, float, float, float, float]]:
         """
         Reads result datafile and returns it in a format usable by multiplot.
         
@@ -343,6 +315,35 @@ if __name__ == "__main__":
                 line = resultFile.readline()
         
         return output
+
+if __name__ == "__main__":
+    from sys import argv
+
+    RUN_SINGLE_PARM = 0
+    PLOT = 1
+    PARAMETER_SCAN = 2
+
+    def main(args: List[str]):
+        """
+        Main function, see file docstring
+        
+        Takes argv as input.
+        """
+        mode, maxIter, parms, runs, processes, boxLen, immuneFrac, filename, plotTitle, noPlot = parseArgv(args)
+        if mode == PLOT:
+            multiPlot(readData(filename), plotTitle)
+            return
+        elif mode == PARAMETER_SCAN:
+            output = parScan(maxIter, parms, runs, processes, boxLen, immuneFrac, filename)
+            if not noPlot:
+                multiMultiplot(*output)
+            return
+        output = paralelRun(maxIter, parms, runs, processes, boxLen, immuneFrac)
+        saveResults(output, filename, parms, runs, maxIter)
+        if not noPlot:
+            multiPlot(output)
+        return output
+
     
     def parseArgv(args: List[str]):
         """
