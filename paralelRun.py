@@ -105,9 +105,8 @@ def parScan(maxIter:int, parms: Dict[str, any], runs: int, processes: int, boxLe
                 
                 result = paralelRun(maxIter, parmsList[-1], runs, processes, boxLen, immuneFrac)
                 outputs.append(result)
-                newName = filename + f"-{str(parmsList[-1].items())[10:]}"
+                newName = filename + f"-{str(parmsList[-1].items())[10:]}".replace(" ", "")
                 saveResults(outputs[-1], newName, parmsList[-1], runs, maxIter)
-    # TODO add multiple side by side plots
     return parmsList, outputs
 
 
@@ -388,7 +387,7 @@ if __name__ == "__main__":
                         boxLen     = int(val)
                     elif key.lower() in ["immunefraction", "fractionimmune","immunefrac", "if", "frac", "f"]:
                         immuneFrac = float(val)
-                    elif key.lower() in ["noplot"]:
+                    elif key.lower() in ["noplot", "noplotting"]:
                         noPlot = True
                     
                     else:
