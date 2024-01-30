@@ -9,7 +9,7 @@ from multiprocessing import Pool
 import matplotlib.pyplot as plt
 import numpy as np
 
-from model.classes.cancerImmuneModel import CancerImmuneModel
+from model.classes.bacteriaImmuneModel import bacteriaImmuneModel
 
 from typing import Dict, List, Tuple
 
@@ -62,13 +62,13 @@ Usage:
 
         case sensitive model parameters:
             pImmuneKill=(float/list[float])
-            - The chance an immune cell kills a cancer cell it occupies the same cell as.
+            - The chance an immune cell kills a bacteria cell it occupies the same cell as.
 
-            pCancerMultiply=(float/list[float])
-            - The chance a cancer cell multiplies.
+            pbacteriaMultiply=(float/list[float])
+            - The chance a bacteria cell multiplies.
 
-            pCancerSpawn=(float/list[float])
-            - The chance a cancer cell spawns on the grid.
+            pbacteriaSpawn=(float/list[float])
+            - The chance a bacteria cell spawns on the grid.
 
             A list structure can also be entered, which makes the program loop through all possible
             combinations of these parameters.
@@ -86,8 +86,8 @@ INITIAL_IMMUNE = 0.006 # Initial amount of immune cells (arbitrary in theory)
 # Model parameters
 PARMS = { # Maybe rework into generator function
         "pImmuneKill" : 0.5,
-        "pCancerMult" : 0.4,
-        "pCancerSpawn": 0.1
+        "pbacteriaMult" : 0.4,
+        "pbacteriaSpawn": 0.1
         }
 
 
@@ -178,11 +178,11 @@ def parScan(maxIter:int, parms: Dict[str, any], runs: int, processes: int, boxLe
     parmsList: List[Dict[str,float]] = []
     outputs   = []
     for option0 in parms["pImmuneKill"]:
-        for option1 in parms["pCancerMult"]:
-            for option2 in parms["pCancerSpawn"]:
+        for option1 in parms["pbacteriaMult"]:
+            for option2 in parms["pbacteriaSpawn"]:
                 parmsList.append({"pImmuneKill" : option0,
-                                  "pCancerMult" : option1,
-                                  "pCancerSpawn": option2
+                                  "pbacteriaMult" : option1,
+                                  "pbacteriaSpawn": option2
                                  })
 
                 result = paralelRun(maxIter, parmsList[-1], runs, processes, boxLen, immuneFrac)
@@ -195,7 +195,7 @@ def parScan(maxIter:int, parms: Dict[str, any], runs: int, processes: int, boxLe
 
 def paralelRun(maxIter:int, parms: Dict[str, float], runs: int, processes: int, boxLen: int, immuneFrac: float) -> None:
     """
-    Parralellized data collection function for CancerImmuneModel
+    Parralellized data collection function for bacteriaImmuneModel
 
     Measures the occupancy of immune cells as defined by nImmune / boxLength**2 per iteration for a
     set amount of runs. Average, variance and standard deviation are calculated from this and saved
@@ -230,16 +230,16 @@ def runOnce(maxIter: int, parms: Dict[str, float], boxLen: int, immuneFrac: floa
         boxLen (int): The length of the box (assumed to be square, so length = width).
         immuneFrac (float): Initial amount of immune cells.
 
-    Returns (np.ndarray): Array with immune and cancer cell data per iteration.
+    Returns (np.ndarray): Array with immune and bacteria cell data per iteration.
     """
     clean_parms = {key: value for key, value in parms.items() if key not in ['length', 'width']}
-    model = CancerImmuneModel(length=boxLen, width=boxLen, **clean_parms)
+    model = bacteriaImmuneModel(length=boxLen, width=boxLen, **clean_parms)
     model.seedImmune(round(boxLen ** 2 * immuneFrac))
     vals: np.ndarray[float] = np.ndarray((2, maxIter), float)
     for iter in range(maxIter):
         model.timestep()
         vals[0, iter] = model.get_nImmuneCells() / boxLen**2
-        vals[1, iter] = model.get_nCancerCells() / boxLen**2
+        vals[1, iter] = model.get_nbacteriaCells() / boxLen**2
     return vals
 
 
@@ -282,7 +282,7 @@ def multiPlot(results: List[Tuple[float, float, float, float]], plotTitle= None)
 
     Args:
         plot (List[Dict[str, List[Tuple[float, float, float]]]]): The calculated statistics for immune
-        and cancer cell occupancy.
+        and bacteria cell occupancy.
 
     Returns:
         None: This function does not return anything but plots the results.
@@ -415,14 +415,14 @@ if __name__ == "__main__":
         if mode == "sensitivity":
             param_ranges = {
                 'pImmuneKill': (0.1, 1.0),
-                'pCancerMult': (0.0, 0.5),
-                'pCancerSpawn': (0.0, 0.2)
+                'pbacteriaMult': (0.0, 0.5),
+                'pbacteriaSpawn': (0.0, 0.2)
             }
             initial_conditions = {'length': boxLen, 'width': boxLen,
                                   'pImmuneKill': parms.get('pImmuneKill', 0.5),
-                                  'pCancerMult': parms.get('pCancerMult', 0.4),
-                                  'pCancerSpawn': parms.get('pCancerSpawn', 0.1)}
-            sensitivity_results = sensitivityAnalysis(CancerImmuneModel, param_ranges, initial_conditions, maxIter,
+                                  'pbacteriaMult': parms.get('pbacteriaMult', 0.4),
+                                  'pbacteriaSpawn': parms.get('pbacteriaSpawn', 0.1)}
+            sensitivity_results = sensitivityAnalysis(bacteriaImmuneModel, param_ranges, initial_conditions, maxIter,
                                                       runs, processes, boxLen, immuneFrac)
             plotSensitivityAnalysis(sensitivity_results)
 
