@@ -108,8 +108,7 @@ def parScan(maxIter:int, parms: Dict[str, any], runs: int, processes: int, boxLe
                 
                 result = paralelRun(maxIter, parmsList[-1], runs, processes, boxLen, immuneFrac)
                 outputs.append(result)
-                newName = filename + f"-{str(parmsList[-1].items())[10:]}".replace(" ", "")
-                saveResults(outputs[-1], newName, parmsList[-1], runs, maxIter)
+                saveResults(outputs[-1], filename, parmsList[-1], runs, maxIter)
     return parmsList, outputs
 
 
@@ -272,7 +271,7 @@ def saveResults(plot: List[Tuple[float, float, float]], filename: str, parms: Di
     """
     os.makedirs("Output", exist_ok=True)
 
-    with open(f"output/{filename}.csv", "w") as outFile:
+    with open(f"output/{filename+  f'-{str(parms.items())[10:]}'.replace(' ', '')}.csv", "w") as outFile:
           
         outFile.write(f"{parms}\n")
         outFile.write(f"{runs} runs over {maxIter} iterations\n")

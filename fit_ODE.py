@@ -141,6 +141,7 @@ def main(filename = FILENAME, xGuess: np.ndarray = X_GUESS):
 
     xOut = fitODE(immuneCells, bacterialCells, xGuess)["x"]
     print(f"xOut = {xOut}")
+    print(f"xOut = {[item for item in xOut]}")
     ODE_immune, ODE_bacteria = runODE(len(immuneCells), DT, xOut[ALPHA], xOut[BETA], xOut[GAMMA], 0, 
                                     bacterialCells[0], immuneCells[0], xOut[SPAWN])
     
