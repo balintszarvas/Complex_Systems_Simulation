@@ -2,6 +2,7 @@ from copy import copy
 from math import sqrt
 from time import time, sleep
 import os
+import json
 
 import multiprocessing
 import matplotlib.pyplot as plt
@@ -275,9 +276,42 @@ def saveResults(plot: List[Tuple[float, float, float]], filename: str, parms: Di
         outFile.write("\n")
     return
 
+
+def readData(filename: str) -> List[Tuple[float, float, float]]:
+    """
+    Reads result datafile and returns it in a format usable by multiplot.
+    
+    Args:
+        filename (str): The filename of the resultfile
+    
+    Returns (List[Tuple[float, float, float]]): A list of tuples containing the average occupation,
+        the variance and the standard deviation for every iteration.
+
+    """
+    output = []
+
+    if not ".csv" in filename:
+        filename = f"{filename}.csv"
+
+    with open(filename, newline=None) as resultFile:
+        line = resultFile.readline().replace("'", '"')
+        parms = json.loads(line)
+
+        while line != "\n":
+            line = resultFile.readline()
+        resultFile.readline()
+        line = resultFile.readline()
+
+        while line != None and line != "\n":
+            splitline = line.split(',')
+            output.append(tuple([float(item) for item in splitline]))
+            line = resultFile.readline()
+    
+    return output
+    
+
 if __name__ == "__main__":
     from sys import argv
-    import json
 
     RUN_SINGLE_PARM = 0
     PLOT = 1
@@ -304,39 +338,6 @@ if __name__ == "__main__":
             multiPlot(output)
         return output
     
-
-    def readData(filename: str) -> List[Tuple[float, float, float]]:
-        """
-        Reads result datafile and returns it in a format usable by multiplot.
-        
-        Args:
-            filename (str): The filename of the resultfile
-        
-        Returns (List[Tuple[float, float, float]]): A list of tuples containing the average occupation,
-            the variance and the standard deviation for every iteration.
-
-        """
-        output = []
-
-        if not ".csv" in filename:
-            filename = f"{filename}.csv"
-
-        with open(filename, newline=None) as resultFile:
-            line = resultFile.readline().replace("'", '"')
-            parms = json.loads(line)
-
-            while line != "\n":
-                line = resultFile.readline()
-            resultFile.readline()
-            line = resultFile.readline()
-
-            while line != None and line != "\n":
-                splitline = line.split(',')
-                output.append(tuple([float(item) for item in splitline]))
-                line = resultFile.readline()
-        
-        return output
-    
     def parseArgv(args: List[str]):
         """
         Argv parser.
@@ -353,6 +354,7 @@ if __name__ == "__main__":
         immuneFrac = INITIAL_IMMUNE
         parms      = PARMS
         noPlot     = False
+        plotTitle  = DEF_FILENAME
     
         if len(args) > 1:
             # Plotting past results:
@@ -364,38 +366,38 @@ if __name__ == "__main__":
                 plotTitle = args[3]
 
             # Run parallel program
-            else:
-                args.pop(0)
+        else:
+            args.pop(0)
 
-                if args[0].isnumeric():
-                    runs      = int(args.pop(0))
-                if len(args) > 0 and args[0].isnumeric():
-                    maxIter   = int(args.pop(0))
-                if len(args) > 0 and args[0].isnumeric():
-                    processes = int(args.pop(0))
+            if args[0].isnumeric():
+                runs      = int(args.pop(0))
+            if len(args) > 0 and args[0].isnumeric():
+                maxIter   = int(args.pop(0))
+            if len(args) > 0 and args[0].isnumeric():
+                processes = int(args.pop(0))
 
-                for key, val in [item.split('=') for item in args]:
-                    if   key.lower() in ["filename", "fn", "name", "n"]:
-                        filename   = val
-                    elif key.lower() in ["runs", "r"]:
-                        runs       = int(val)
-                    elif key.lower() in ["maxiter", "iter", "iterations", "i"]:
-                        maxIter    = int(val)
-                    elif key.lower() in ["processes", "proc", "p"]:
-                        processes  = int(val)
-                    elif key.lower() in ["boxl", "boxlen", "bl", "boxlenght"]:
-                        boxLen     = int(val)
-                    elif key.lower() in ["immunefraction", "fractionimmune","immunefrac", "if", "frac", "f"]:
-                        immuneFrac = float(val)
-                    elif key.lower() in ["noplot", "noplotting"]:
-                        noPlot = True
-                    
+            for key, val in [item.split('=') for item in args]:
+                if   key.lower() in ["filename", "fn", "name", "n"]:
+                    filename   = val
+                elif key.lower() in ["runs", "r"]:
+                    runs       = int(val)
+                elif key.lower() in ["maxiter", "iter", "iterations", "i"]:
+                    maxIter    = int(val)
+                elif key.lower() in ["processes", "proc", "p"]:
+                    processes  = int(val)
+                elif key.lower() in ["boxl", "boxlen", "bl", "boxlenght"]:
+                    boxLen     = int(val)
+                elif key.lower() in ["immunefraction", "fractionimmune","immunefrac", "if", "frac", "f"]:
+                    immuneFrac = float(val)
+                elif key.lower() in ["noplot", "noplotting"]:
+                    noPlot = True
+                
+                else:
+                    if "[" in val:
+                        parms[key] = json.loads(val)
+                        mode = PARAMETER_SCAN
                     else:
-                        if "[" in val:
-                            parms[key] = json.loads(val)
-                            mode = PARAMETER_SCAN
-                        else:
-                            parms[key] = float(val)
+                        parms[key] = float(val)
 
         return mode, maxIter, parms, runs, processes, boxLen, immuneFrac, filename, plotTitle, noPlot
 
