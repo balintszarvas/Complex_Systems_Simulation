@@ -5,6 +5,7 @@ import os
 import json
 
 import multiprocessing
+from multiprocessing import Pool
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -19,7 +20,7 @@ Usage:
         `python paralelRun.py p [FILEPATH] [PLOTNAME: optional]`
             FILEPATH   - Path of the exported CSV file.
             PLOTNAME   - Title for the plotted image
-        
+
     To run an experiment with default settings, run the program as:
         `python paralelRun.py`
 
@@ -40,25 +41,25 @@ Usage:
         case insensitive:
         ["filename", "fn", "name", "n"]=(int)
         - Filename for the resultFile
-        
+
         ["runs", "r"]=(int)
         - The amount of runs to take average of.
-        
+
         ["maxiter", "iter", "iterations", "i"]=(int)
         - The maximum amount of iterations for a single run.
-        
+
         ["processes", "proc", "p"]=(int)
         - The amount of parallel processes to run.
-        
+
         ["boxl", "boxlen", "bl", "boxlenght"]=(int)
         - The length of the modelled square box.
-        
+
         ["immunefraction", "fractionimmune","immunefrac", "if", "frac", "f"]=(float)
         - The fraction of cells to be occupied by immune cells in the initial state of the model.
-        
+
         ["noplot"]=(bool)
         - disable plotting of results afterwards
-        
+
         case sensitive model parameters:
             pImmuneKill=(float/list[float])
             - The chance an immune cell kills a cancer cell it occupies the same cell as.
@@ -90,6 +91,84 @@ PARMS = { # Maybe rework into generator function
         }
 
 
+def sensitivityTask(maxIter, temp_parms, runs, boxLen, immuneFrac):
+    """
+    function for sensitivity analysis to be run in parallel
+
+    """
+    output = []
+    for _ in range(runs):
+        output.append(runOnce(maxIter, temp_parms,boxLen, immuneFrac))
+    return calculate_statistics(output)
+
+
+def sensitivityAnalysis(model_class, param_ranges, initial_conditions, maxIter, runs, processes,boxLen,immuneFrac):
+    """
+
+    sensitivity analysis function for parallel execution
+
+    """
+    sensitivity_results = {}
+    tasks = []
+    for param, (min_val,max_val) in param_ranges.items():
+        step =(max_val- min_val) /10
+        for val in np.arange(min_val,max_val +step,step):
+            temp_parms =initial_conditions.copy()
+            temp_parms[param] =val
+            tasks.append((maxIter,temp_parms, runs, boxLen,immuneFrac))
+
+    with Pool(processes) as pool:
+        results =pool.starmap(sensitivityTask,tasks)
+
+
+    i=0
+    for param, (min_val,max_val) in param_ranges.items():
+        step =(max_val - min_val) /10
+        sensitivity_results[param] = []
+        for val in np.arange(min_val,max_val + step,step):
+            sensitivity_results[param].append((val,results[i]))
+            i +=1
+
+    return sensitivity_results
+
+def plotSensitivityAnalysis(sensitivity_results):
+    """
+    plot results for each parameter vs Immune and Bacteria averaghe
+    """
+    for param, results in sensitivity_results.items():
+        #Immune Cells
+        plt.figure(figsize=(10, 6))
+        for val, data in results:
+            iters = range(len(data))
+            avg_immune_cells = [avgI for avgI, _, _, _, _, _ in data]
+            plt.plot(iters, avg_immune_cells, label=f"{param}={val:.2f}")
+
+        immune_title = f"Sensitivity Analysis for {param} - Immune Cells"
+        plt.title(immune_title)
+        plt.xlabel("Iteration")
+        plt.ylabel("Average Immune Cell Count")
+        plt.legend()
+        filename_immune = immune_title.replace(" ", "_").replace("-", "_").lower() + ".png"
+        plt.savefig(f"output/{filename_immune}")
+        plt.show()
+
+        # bacteria Cells
+        plt.figure(figsize=(10, 6))
+        for val, data in results:
+            iters = range(len(data))
+            avg_bacteria_cells = [avgB for _, _, _, avgB, _, _ in data]
+            plt.plot(iters, avg_bacteria_cells, label=f"{param}={val:.2f}")
+
+        bacteria_title = f"Sensitivity Analysis for {param} - bacteria Cells"
+        plt.title(bacteria_title)
+        plt.xlabel("Iteration")
+        plt.ylabel("Average bacteria Cell Count")
+        plt.legend()
+
+        filename_bacteria = bacteria_title.replace(" ","_").replace("-", "_").lower() + ".png"
+        plt.savefig(f"output/{filename_bacteria}")
+        plt.show()
+
 def parScan(maxIter:int, parms: Dict[str, any], runs: int, processes: int, boxLen: int, immuneFrac: float, filename: str):
     """Loop through possible parameters"""
 
@@ -105,7 +184,7 @@ def parScan(maxIter:int, parms: Dict[str, any], runs: int, processes: int, boxLe
                                   "pCancerMult" : option1,
                                   "pCancerSpawn": option2
                                  })
-                
+
                 result = paralelRun(maxIter, parmsList[-1], runs, processes, boxLen, immuneFrac)
                 outputs.append(result)
                 newName = filename + f"-{str(parmsList[-1].items())[10:]}"
@@ -124,7 +203,7 @@ def paralelRun(maxIter:int, parms: Dict[str, float], runs: int, processes: int, 
 
     Average and standard deviation are plotted in matplotlib and displayed to the user.
     """
-    
+
     t_init = time()
 
     a = multiprocessing.Pool(processes)
@@ -132,7 +211,7 @@ def paralelRun(maxIter:int, parms: Dict[str, float], runs: int, processes: int, 
     input = [(maxIter, parms, boxLen, immuneFrac) for i in range(runs)]
 
     print(f"Running {runs} simulations of {maxIter} iterations over {processes} processes")
-    output = a.starmap(runOnce, input)    
+    output = a.starmap(runOnce, input)
     print(f"Total model runtime: {time() - t_init}")
     t_init = time()
     output = calculate_statistics(output)
@@ -141,27 +220,28 @@ def paralelRun(maxIter:int, parms: Dict[str, float], runs: int, processes: int, 
     return output
 
 
-def runOnce(maxIter: int, parms: Dict[str, float], boxLen: int, immuneFrac: float) -> np.ndarray[float]:
+def runOnce(maxIter: int, parms: Dict[str, float], boxLen: int, immuneFrac: float) -> np.ndarray:
     """
-    Runs the model once for the given parameter.
-    
+    Runs the model once for the given parameters.
+
     Args:
         maxIter (int): The amount of iterations to run the model for.
-        INTIAL_IMMUNE (float): Initial amount of immune cells.
-        parms (Dict[str, float]): Model parameters (pCancerMult, pImmuneKill, pCancerSpawn).
+        parms (Dict[str, float]): Model parameters (excluding box length and width).
+        boxLen (int): The length of the box (assumed to be square, so length = width).
+        immuneFrac (float): Initial amount of immune cells.
 
-    Returns (np.ndarray): A 2 x maxIter array with immune cell data in the left collumn and bacterial
-        cell data in the right.
+    Returns (np.ndarray): Array with immune and cancer cell data per iteration.
     """
-    parms = copy(parms)
-    model = CancerImmuneModel(boxLen, boxLen, **parms)
-    model.seedImmune(round(boxLen**2 * immuneFrac))
-    vals: np.ndarray[float] = np.ndarray((2,maxIter), float)
+    clean_parms = {key: value for key, value in parms.items() if key not in ['length', 'width']}
+    model = CancerImmuneModel(length=boxLen, width=boxLen, **clean_parms)
+    model.seedImmune(round(boxLen ** 2 * immuneFrac))
+    vals: np.ndarray[float] = np.ndarray((2, maxIter), float)
     for iter in range(maxIter):
         model.timestep()
         vals[0, iter] = model.get_nImmuneCells() / boxLen**2
         vals[1, iter] = model.get_nCancerCells() / boxLen**2
     return vals
+
 
 
 def calculate_statistics(values: np.ndarray) -> List[Tuple[float, float, float, float, float, float]]:
@@ -172,10 +252,10 @@ def calculate_statistics(values: np.ndarray) -> List[Tuple[float, float, float, 
         values (List[float]): List of numerical values.
 
     Returns:
-        Tuple[float, float, float]: A tuple containing the average, variance, and standard deviation 
+        Tuple[float, float, float]: A tuple containing the average, variance, and standard deviation
         of the input values.
     """
-    # Split List of Per run tuples of per cell tuples up into List of Per cell Lists of per run lists 
+    # Split List of Per run tuples of per cell tuples up into List of Per cell Lists of per run lists
     immune   = [point[0,:] for point in values]
     immune   = list(zip(*immune))
     bacteria = [point[1,:] for point in values]
@@ -201,7 +281,7 @@ def multiPlot(results: List[Tuple[float, float, float, float]], plotTitle= None)
     Plots the results of model simulations.
 
     Args:
-        plot (List[Dict[str, List[Tuple[float, float, float]]]]): The calculated statistics for immune 
+        plot (List[Dict[str, List[Tuple[float, float, float]]]]): The calculated statistics for immune
         and cancer cell occupancy.
 
     Returns:
@@ -218,7 +298,7 @@ def multiPlot(results: List[Tuple[float, float, float, float]], plotTitle= None)
 
     for averages, std_devs, label in [(averagesI, std_devsI, "Immune Cells"), (averagesB, std_devsB, "Bacteria")]:
         ax.plot(iters, averages, label=f"Average {label}")
-        ax.fill_between(iters, 
+        ax.fill_between(iters,
                         [a - s for a, s in zip(averages, std_devs)],
                         [a + s for a, s in zip(averages, std_devs)],
                         alpha=0.5, label=f"Std Dev {label}"
@@ -229,10 +309,10 @@ def multiPlot(results: List[Tuple[float, float, float, float]], plotTitle= None)
     ax.legend()
     if plotTitle:
         ax.set_title(plotTitle)
-    
+
     plt.tight_layout()
     plt.show()
-    
+
 def multiMultiplot(parms: List[Dict[str, float]], results: List[List[Tuple[float, float, float, float]]]):
     fig, axs = plt.subplots(1, len(results))
 
@@ -246,13 +326,13 @@ def multiMultiplot(parms: List[Dict[str, float]], results: List[List[Tuple[float
         for averages, std_devs, label in [(averagesI, std_devsI, "Immune Cells"), (averagesB, std_devsB, "Bacteria")]:
             assert isinstance(ax, plt.Axes)
             ax.plot(iters, averages, label=f"Average {label}")
-            ax.fill_between(iters, 
+            ax.fill_between(iters,
                             [a - s for a, s in zip(averages, std_devs)],
                             [a + s for a, s in zip(averages, std_devs)],
                             alpha=0.5, label=f"Std Dev {label}"
                         )
             ax.set_title(f"Run {id}\n{str(parm.items())[10:]}", fontsize=10)
-        
+
         ax.set_xlabel("Iteration")
         ax.set_ylabel("Cell occupancy")
         ax.legend()
@@ -261,7 +341,7 @@ def multiMultiplot(parms: List[Dict[str, float]], results: List[List[Tuple[float
     plt.show()
 
 
-def saveResults(plot: List[Tuple[float, float, float]], filename: str, parms: Dict[str, float], 
+def saveResults(plot: List[Tuple[float, float, float]], filename: str, parms: Dict[str, float],
                 runs: int, maxIter: int
                ) -> None:
     """
@@ -274,7 +354,7 @@ def saveResults(plot: List[Tuple[float, float, float]], filename: str, parms: Di
     os.makedirs("Output", exist_ok=True)
 
     with open(f"output/{filename}.csv", "w") as outFile:
-          
+
         outFile.write(f"{parms}\n")
         outFile.write(f"{runs} runs over {maxIter} iterations\n")
         outFile.write("\n")
@@ -287,10 +367,10 @@ def saveResults(plot: List[Tuple[float, float, float]], filename: str, parms: Di
 def readData(filename: str) -> List[Tuple[float, float, float, float, float]]:
         """
         Reads result datafile and returns it in a format usable by multiplot.
-        
+
         Args:
             filename (str): The filename of the resultfile
-        
+
         Returns (List[Tuple[float, float, float]]): A list of tuples containing the average occupation,
             the variance and the standard deviation for every iteration.
 
@@ -313,7 +393,7 @@ def readData(filename: str) -> List[Tuple[float, float, float, float, float]]:
                 splitline = line.split(',')
                 output.append(tuple([float(item) for item in splitline]))
                 line = resultFile.readline()
-        
+
         return output
 
 if __name__ == "__main__":
@@ -322,15 +402,31 @@ if __name__ == "__main__":
     RUN_SINGLE_PARM = 0
     PLOT = 1
     PARAMETER_SCAN = 2
+    SENSITIVITY_ANALYSIS = 3
 
     def main(args: List[str]):
         """
         Main function, see file docstring
-        
+
         Takes argv as input.
         """
         mode, maxIter, parms, runs, processes, boxLen, immuneFrac, filename, plotTitle, noPlot = parseArgv(args)
-        if mode == PLOT:
+
+        if mode == "sensitivity":
+            param_ranges = {
+                'pImmuneKill': (0.1, 1.0),
+                'pCancerMult': (0.0, 0.5),
+                'pCancerSpawn': (0.0, 0.2)
+            }
+            initial_conditions = {'length': boxLen, 'width': boxLen,
+                                  'pImmuneKill': parms.get('pImmuneKill', 0.5),
+                                  'pCancerMult': parms.get('pCancerMult', 0.4),
+                                  'pCancerSpawn': parms.get('pCancerSpawn', 0.1)}
+            sensitivity_results = sensitivityAnalysis(CancerImmuneModel, param_ranges, initial_conditions, maxIter,
+                                                      runs, processes, boxLen, immuneFrac)
+            plotSensitivityAnalysis(sensitivity_results)
+
+        elif mode == PLOT:
             multiPlot(readData(filename), plotTitle)
             return
         elif mode == PARAMETER_SCAN:
@@ -344,7 +440,7 @@ if __name__ == "__main__":
             multiPlot(output)
         return output
 
-    
+
     def parseArgv(args: List[str]):
         """
         Argv parser.
@@ -363,18 +459,19 @@ if __name__ == "__main__":
         parms      = PARMS
         noPlot     = False
 
-        
+
         if len(args) > 1:
             # Plotting past results:
             if args[1].lower() in ['p', 'plot']:
                 mode = PLOT
                 filename = args[2]
-            
+
                 if len(args) > 3:
                     plotTitle = args[3]
 
             # Run parallel program
             else:
+
                 args.pop(0)
                 if args[0].isnumeric():
                     runs      = int(args.pop(0))
@@ -382,23 +479,25 @@ if __name__ == "__main__":
                     maxIter   = int(args.pop(0))
                 if len(args) > 0 and args[0].isnumeric():
                     processes = int(args.pop(0))
-
+                if len(args) > 0 and args[0] == 'sensitivity':
+                    mode = "sensitivity"
+                    return mode, maxIter, parms, runs, processes, boxLen, immuneFrac, filename, plotTitle, noPlot
                 for key, val in [item.split('=') for item in args]:
-                    if   key.lower() in ["filename", "fn", "name", "n"]:
-                        filename   = val
+                    if key.lower() in ["filename", "fn", "name", "n"]:
+                        filename = val
                     elif key.lower() in ["runs", "r"]:
-                        runs       = int(val)
+                        runs = int(val)
                     elif key.lower() in ["maxiter", "iter", "iterations", "i"]:
-                        maxIter    = int(val)
+                        maxIter = int(val)
                     elif key.lower() in ["processes", "proc", "p"]:
-                        processes  = int(val)
+                        processes = int(val)
                     elif key.lower() in ["boxl", "boxlen", "bl", "boxlenght"]:
-                        boxLen     = int(val)
-                    elif key.lower() in ["immunefraction", "fractionimmune","immunefrac", "if", "frac", "f"]:
+                        boxLen = int(val)
+                    elif key.lower() in ["immunefraction", "fractionimmune", "immunefrac", "if", "frac", "f"]:
                         immuneFrac = float(val)
                     elif key.lower() in ["noplot"]:
                         noPlot = True
-                    
+
                     else:
                         if "[" in val:
                             parms[key] = json.loads(val)
