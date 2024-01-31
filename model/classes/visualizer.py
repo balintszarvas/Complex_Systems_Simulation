@@ -40,4 +40,5 @@ class Visualizer:
         
     def run(self):
         ani = FuncAnimation(self.fig, self.frame, frames=None, interval=1, repeat = False)
-        plt.show()
+        # plt.show()
+        ani.save("test4.gif", writer='pillow')
