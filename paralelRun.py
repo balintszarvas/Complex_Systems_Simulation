@@ -91,6 +91,48 @@ PARMS = { # Maybe rework into generator function
         }
 
 
+def plotEquilibriumParameterInteractions(sensitivity_results, equilibrium_range):
+    """
+    Plot interactions between parameters for immune and bacteria cells at equilibrium.
+    """
+    for param, results in sensitivity_results.items():
+        # Create subplots with 1 row and 2 columns
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 6))
+
+        # Lists to hold equilibrium values for both bacteria and immune cells
+        equilibrium_values_bacteria = []
+        equilibrium_values_immune = []
+        param_values = []
+
+        for val, data in results:
+            # Calculate the equilibrium average for the last `equilibrium_range` iterations
+            equilibrium_avg_bacteria = np.mean([avgB for _, _, _, avgB, _, _ in data[-equilibrium_range:]])
+            equilibrium_avg_immune = np.mean([avgI for avgI, _, _, _, _, _ in data[-equilibrium_range:]])
+            equilibrium_values_bacteria.append(equilibrium_avg_bacteria)
+            equilibrium_values_immune.append(equilibrium_avg_immune)
+            param_values.append(val)
+
+        # Plot for bacteria
+        ax1.plot(param_values, equilibrium_values_bacteria, label=f"Equilibrium {param}", marker='o')
+        ax1.set_title(f"Equilibrium Analysis for {param} - Bacteria")
+        ax1.set_xlabel(f"Value of {param}")
+        ax1.set_ylabel("Average bacteria cell count at equilibrium")
+        ax1.legend()
+
+        # Plot for immune cells
+        ax2.plot(param_values, equilibrium_values_immune, label=f"Equilibrium {param}", marker='o', color='orange')
+        ax2.set_title(f"Equilibrium Analysis for {param} - Immune Cells")
+        ax2.set_xlabel(f"Value of {param}")
+        ax2.set_ylabel("Average immune cell count at equilibrium")
+        ax2.legend()
+
+        # Adjust layout and save the figure
+        plt.tight_layout()
+        filename = f"equilibrium_interaction_{param}.png"
+        plt.savefig(f"output/{filename}")
+        plt.show()
+
+
 def sensitivityTask(maxIter, temp_parms, runs, boxLen, immuneFrac):
     """
     function for sensitivity analysis to be run in parallel
@@ -415,8 +457,8 @@ if __name__ == "__main__":
         if mode == "sensitivity":
             param_ranges = {
                 'pImmuneKill': (0.1, 1.0),
-                'pbacteriaMult': (0.0, 0.5),
-                'pbacteriaSpawn': (0.0, 0.2)
+                'pbacteriaMult': (0.1, 0.7),
+                'pbacteriaSpawn': (0.05, 0.4)
             }
             initial_conditions = {'length': boxLen, 'width': boxLen,
                                   'pImmuneKill': parms.get('pImmuneKill', 0.5),
@@ -424,8 +466,8 @@ if __name__ == "__main__":
                                   'pbacteriaSpawn': parms.get('pbacteriaSpawn', 0.1)}
             sensitivity_results = sensitivityAnalysis(bacteriaImmuneModel, param_ranges, initial_conditions, maxIter,
                                                       runs, processes, boxLen, immuneFrac)
-            plotSensitivityAnalysis(sensitivity_results)
-
+            #plotSensitivityAnalysis(sensitivity_results)
+            plotEquilibriumParameterInteractions(sensitivity_results, equilibrium_range = 50)
         elif mode == PLOT:
             multiPlot(readData(filename), plotTitle)
             return
