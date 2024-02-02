@@ -5,9 +5,6 @@ import numpy as np
 import scipy as sp
 import scipy.optimize as spopt
 """
-TODO: 
-    - document args
-    - Implement command line arguments
 d/dt Immune   = a * bacteria * immune - b * immune^2
 d/dt Bacteria = c * bacteria^2 - a * bacteria * immune  + spawnRate
 
@@ -24,7 +21,7 @@ GAMMA = 2
 SPAWN = 3
 DELTA = 4
 
-X_GUESS = np.array([0.5, 0.25, 0.4, 0.1])
+X_GUESS = np.array([0.5, 0.25, 0.4, 0.1, 0.1])
 DT = 0.1
 FILENAME = "output\\'pImmuneKill' 0.5, 'pCancerMult' 0.4, 'pCancerSpawn' 0.1.csv"
 
@@ -45,6 +42,7 @@ def d_dtBacteria(alpha: float, beta: float, gamma: float, delta:float, bacteria:
     Partial differetntial equation for bacterial cells
     """
     return (gamma * bacteria**2) - (alpha * immune * bacteria) + spawnRate
+    # return (gamma * bacteria - delta * bacteria**2) - (alpha * immune * bacteria) + spawnRate
 
 
 def rungeKuttaTimestep(dt:float, alpha:float, beta:float, gamma:float, delta:float, bacteria:float, 
@@ -64,8 +62,7 @@ def rungeKuttaTimestep(dt:float, alpha:float, beta:float, gamma:float, delta:flo
     for i in range(3):
         knI = dt * d_dtImmuneCells(alpha, beta, gamma, delta, bacteria + (kB[-1] / 2), immune  + (kI[-1] / 2), spawnRate)
         knB = dt * d_dtBacteria   (alpha, beta, gamma, delta, bacteria + (kB[-1] / 2), immune  + (kI[-1] / 2), spawnRate)
-        if knB > 1.0:
-            knB = 1.0
+    
         kI.append(knI)
         kB.append(knB)
 
@@ -88,7 +85,7 @@ def runODE(tMax:float, dt:float, alpha:float, beta:float, gamma:float, delta:flo
     bacteria = bacteriaInit
 
     while len(output[0]) < tMax:
-        dimmune, dbacteria = rungeKuttaTimestep(dt, alpha, beta, gamma,delta, bacteria, immune, spawnRate)
+        dimmune, dbacteria = rungeKuttaTimestep(dt, alpha, beta, gamma, delta, bacteria, immune, spawnRate)
 
         immune   += dimmune
         bacteria += dbacteria
@@ -114,7 +111,7 @@ def toMinimize(x: np.array, dt, immune: List[float], bacteria: List[float]):
     attempts += 1
 
     tMax = len(immune)
-    ODE_immune, ODE_bacteria = runODE(tMax, dt, x[ALPHA], x[BETA], x[GAMMA], 0, bacteria[0], immune[0], x[SPAWN])
+    ODE_immune, ODE_bacteria = runODE(tMax, dt, x[ALPHA], x[BETA], x[GAMMA], x[DELTA], bacteria[0], immune[0], x[SPAWN])
     score  = sum([(spatial - ode)**2 for spatial, ode in zip(immune  , ODE_immune  )])
     score += sum([(spatial - ode)**2 for spatial, ode in zip(bacteria, ODE_bacteria)])
 
@@ -122,6 +119,14 @@ def toMinimize(x: np.array, dt, immune: List[float], bacteria: List[float]):
 
 def fitODE(immuneCells, bacterialCells, xGuess, dt = DT) -> np.ndarray:
     return spopt.minimize(toMinimize, xGuess, (dt, immuneCells, bacterialCells))
+
+
+def loadData(filename: str) -> Tuple[List[float], List[float]]:
+    data = readData(filename)
+    immuneCells    = [immune   for immune, _, _, bacteria, _, _ in data]
+    bacterialCells = [bacteria for immune, _, _, bacteria, _, _ in data]
+    return immuneCells, bacterialCells
+
 
 def fun_cons_alpha(x,*args):
     return x[ALPHA]
@@ -134,13 +139,17 @@ def fun_cons_spawn(x, *args):
 
 cons_alpha = {"type": "ineq", "fun": fun_cons_alpha} 
 
-def main(filename = FILENAME, xGuess: np.ndarray = X_GUESS):
-    data = readData(filename)
-    immuneCells    = [immune   for immune, _, _, bacteria, _, _ in data]
-    bacterialCells = [bacteria for immune, _, _, bacteria, _, _ in data]
+def main(filename = FILENAME, xGuess: np.ndarray = X_GUESS, plotGuess: bool = False):
+    immuneCells, bacterialCells = loadData(filename)
 
-    xOut = fitODE(immuneCells, bacterialCells, xGuess)["x"]
-    print(f"xOut = {xOut}")
+    if plotGuess:
+        xOut = xGuess
+    else:
+        out = fitODE(immuneCells, bacterialCells, xGuess)
+        xOut = out["x"]
+        print(out["message"])
+        print(f"xOut = {xOut}")
+        print(f"xOut = [{','.join([str(item) for item in xOut])}]")
     ODE_immune, ODE_bacteria = runODE(len(immuneCells), DT, xOut[ALPHA], xOut[BETA], xOut[GAMMA], 0, 
                                     bacterialCells[0], immuneCells[0], xOut[SPAWN])
     
@@ -162,4 +171,16 @@ def plotComparison(immuneSpatial: List[float], BacteriaSpatial: List[float], ODE
     plt.show()
 
 if __name__ == "__main__":
-    main()
+    from sys import argv
+    import json
+    filename = FILENAME
+    xGuess   = X_GUESS
+    plotGuess = False
+    if len(argv) > 1:
+        filename = argv[1]
+    if len(argv) > 2:
+        xGuess = np.array(json.loads(argv[2]))
+    if len(argv) > 3:
+        plotGuess = bool(argv[3])
+
+    main(filename, xGuess, plotGuess)

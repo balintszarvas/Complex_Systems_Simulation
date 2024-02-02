@@ -13,7 +13,7 @@ from model.classes.cancerImmuneModel import CancerImmuneModel
 from typing import Dict, List, Tuple
 
 
-"""
+"""Parallel running program for Bacteria immune model.
 Usage:
     To plot an earlier result, run the program like:
         `python paralelRun.py p [FILEPATH] [PLOTNAME: optional]`
@@ -108,13 +108,12 @@ def parScan(maxIter:int, parms: Dict[str, any], runs: int, processes: int, boxLe
                 
                 result = paralelRun(maxIter, parmsList[-1], runs, processes, boxLen, immuneFrac)
                 outputs.append(result)
-                newName = filename + f"-{str(parmsList[-1].items())[10:]}"
-                saveResults(outputs[-1], newName, parmsList[-1], runs, maxIter)
-    # TODO add multiple side by side plots
+                saveResults(outputs[-1], filename, parmsList[-1], runs, maxIter)
     return parmsList, outputs
 
 
-def paralelRun(maxIter:int, parms: Dict[str, float], runs: int, processes: int, boxLen: int, immuneFrac: float) -> None:
+def paralelRun(maxIter:int, parms: Dict[str, float], runs: int, processes: int, boxLen: int, 
+               immuneFrac: float) -> List[Tuple[float, float, float, float, float, float]]:
     """
     Parralellized data collection function for CancerImmuneModel
 
@@ -263,7 +262,7 @@ def multiMultiplot(parms: List[Dict[str, float]], results: List[List[Tuple[float
 
 def saveResults(plot: List[Tuple[float, float, float]], filename: str, parms: Dict[str, float], 
                 runs: int, maxIter: int
-               ) -> None:
+               ) -> str:
     """
     Saves the calculated results to a CSV file.
 
@@ -273,7 +272,9 @@ def saveResults(plot: List[Tuple[float, float, float]], filename: str, parms: Di
     """
     os.makedirs("Output", exist_ok=True)
 
-    with open(f"output/{filename}.csv", "w") as outFile:
+    filepath = f"output/{filename+  f'-{str(parms.items())[10:]}'.replace(' ', '')}.csv"
+
+    with open(filepath, "w") as outFile:
           
         outFile.write(f"{parms}\n")
         outFile.write(f"{runs} runs over {maxIter} iterations\n")
@@ -282,7 +283,7 @@ def saveResults(plot: List[Tuple[float, float, float]], filename: str, parms: Di
         for avgI, varI, stdDefI, avgB, varB, stdDefB in plot:
             outFile.write(f"{avgI},{varI},{stdDefI},{avgB},{varB},{stdDefB}\n")
         outFile.write("\n")
-    return
+    return filepath
 
 def readData(filename: str) -> List[Tuple[float, float, float, float, float]]:
         """
@@ -343,7 +344,6 @@ if __name__ == "__main__":
         if not noPlot:
             multiPlot(output)
         return output
-
     
     def parseArgv(args: List[str]):
         """
@@ -383,22 +383,26 @@ if __name__ == "__main__":
                 if len(args) > 0 and args[0].isnumeric():
                     processes = int(args.pop(0))
 
-                for key, val in [item.split('=') for item in args]:
-                    if   key.lower() in ["filename", "fn", "name", "n"]:
-                        filename   = val
-                    elif key.lower() in ["runs", "r"]:
-                        runs       = int(val)
-                    elif key.lower() in ["maxiter", "iter", "iterations", "i"]:
-                        maxIter    = int(val)
-                    elif key.lower() in ["processes", "proc", "p"]:
-                        processes  = int(val)
-                    elif key.lower() in ["boxl", "boxlen", "bl", "boxlenght"]:
-                        boxLen     = int(val)
-                    elif key.lower() in ["immunefraction", "fractionimmune","immunefrac", "if", "frac", "f"]:
-                        immuneFrac = float(val)
-                    elif key.lower() in ["noplot"]:
-                        noPlot = True
-                    
+            for key, val in [item.split('=') for item in args]:
+                if   key.lower() in ["filename", "fn", "name", "n"]:
+                    filename   = val
+                elif key.lower() in ["runs", "r"]:
+                    runs       = int(val)
+                elif key.lower() in ["maxiter", "iter", "iterations", "i"]:
+                    maxIter    = int(val)
+                elif key.lower() in ["processes", "proc", "p"]:
+                    processes  = int(val)
+                elif key.lower() in ["boxl", "boxlen", "bl", "boxlenght"]:
+                    boxLen     = int(val)
+                elif key.lower() in ["immunefraction", "fractionimmune","immunefrac", "if", "frac", "f"]:
+                    immuneFrac = float(val)
+                elif key.lower() in ["noplot", "noplotting"]:
+                    noPlot = True
+                
+                else:
+                    if "[" in val:
+                        parms[key] = json.loads(val)
+                        mode = PARAMETER_SCAN
                     else:
                         if "[" in val:
                             parms[key] = json.loads(val)
