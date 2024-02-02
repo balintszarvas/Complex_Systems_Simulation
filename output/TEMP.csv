@@ -1,13 +1,4 @@
 {'pImmuneKill': 0.5, 'pCancerMult': 0.4, 'pCancerSpawn': 0.1}
-<<<<<<< HEAD
-4 runs over 10 iterations
-
-AverageImmune, VarianceImmune, StdDefImmune, AverageBacteria, VarianceBacteria, StdDefBacteria
-0.005965,2.7499999999999667e-10,1.65831239517769e-05,0.0,0.0,0.0
-0.005975,0.0,0.0,5e-06,1.0000000000000003e-10,1e-05
-0.00592,9.999999999999879e-11,9.99999999999994e-06,0.0,0.0,0.0
-0.005999999999999999,7.52316384526264e-37,8.673617379884035e-19,0.00013749999999999998,2.3031250000000003e-08,0.0001517605021077619
-=======
 1 runs over 100 iterations
 
 AverageImmune, VarianceImmune, StdDefImmune, AverageBacteria, VarianceBacteria, StdDefBacteria
@@ -111,5 +102,4 @@ AverageImmune, VarianceImmune, StdDefImmune, AverageBacteria, VarianceBacteria, 
 0.009325,0.0,0.0,0.13145,0.0,0.0
 0.0095,0.0,0.0,0.1352,0.0,0.0
 0.009725,0.0,0.0,0.140125,0.0,0.0
->>>>>>> 9c6d9cd9c71364408415b591513b114c0720cf7d
 

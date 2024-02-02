@@ -1,5 +1,6 @@
+
 from typing import Tuple, List
-from paralelRun import readData
+from tool_paralelRun import readData
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy as sp
@@ -23,7 +24,7 @@ DELTA = 4
 
 X_GUESS = np.array([0.5, 0.25, 0.4, 0.1, 0.1])
 DT = 0.1
-FILENAME = "output\\'pImmuneKill' 0.5, 'pCancerMult' 0.4, 'pCancerSpawn' 0.1.csv"
+FILENAME = "output\\temp"
 
 attempts = 0
 

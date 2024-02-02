@@ -1,6 +1,5 @@
-import os
-import paralelRun as par
-import fit_ODE as fit
+import tool_paralelRun as par
+import tool_fit_ODE as fit
 import numpy as np
 
 """Simple program that generates desired model plots and fits them to an ODE
