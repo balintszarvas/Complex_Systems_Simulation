@@ -4,9 +4,9 @@ import numpy as np
 
 """Simple program that generates desired model plots and fits them to an ODE
 
-Takes variable pCancerMult, and fixed ImmuneKill and pCancerSpawn parameters
+Takes variable pBacteriaMult, and fixed ImmuneKill and pBacteriaSpawn parameters
 Places files in ./output/Batch_ODE-fitted_runs/
-Creates files for individual runs and a file containing all ODE parameters as function of pCancerMult 
+Creates files for individual runs and a file containing all ODE parameters as function of pBacteriaMult 
 
 """
 
@@ -25,13 +25,13 @@ DT        = 0.1
 
 
 def main():
-    pCancerMult  = [MIN + i * ((MAX - MIN) / SAMPLES) for i in range(SAMPLES)]
+    pBacteriaMult  = [MIN + i * ((MAX - MIN) / SAMPLES) for i in range(SAMPLES)]
     pImmuneKill  = 1.0
-    pCancerSpawn = 0.01
+    pBacteriaSpawn = 0.01
 
     filenames = []
-    for mult in pCancerMult:
-        parms = {"pCancerMult":mult, "pImmuneKill": pImmuneKill, "pCancerSpawn": pCancerSpawn}
+    for mult in pBacteriaMult:
+        parms = {"pBacteriaMult":mult, "pImmuneKill": pImmuneKill, "pBacteriaSpawn": pBacteriaSpawn}
 
         dataOut = par.paralelRun(MAXITER, parms, RUNS, PROCESSES, LEN, 0.006)
         filenames.append(par.saveResults(dataOut, OUTDIR + FILENAME, parms, RUNS, MAXITER))
@@ -44,7 +44,7 @@ def main():
         xOuts.append(xOut)
 
     with open("output/" + OUTDIR + "ODEPARMS_" + FILENAME, "w") as outFile:
-        for mult, xOut in zip(pCancerMult, xOuts):
+        for mult, xOut in zip(pBacteriaMult, xOuts):
             outFile.write(f"{mult}, {str([item for item in xOut])[1:-1]}\n")
     return
 
