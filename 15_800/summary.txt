@@ -1,0 +1,34 @@
+Based on the provided images from the sensitivity analysis, here's an interpretation and summary of the results:
+
+    pCancerMult - Bacteria Cells and Immune Cells:
+        As the pCancerMult (probability of cancer cell multiplication) increases, the average bacteria cell count peaks
+        earlier and at a higher level before declining, indicating that a higher multiplication rate accelerates the growth
+         and subsequent decline of bacteria.
+        For immune cells, higher pCancerMult values lead to a slower increase in immune cell count, suggesting that
+        faster cancer cell multiplication may suppress or delay the immune response.
+
+    pCancerSpawn - Bacteria Cells and Immune Cells:
+        Variations in pCancerSpawn (probability of cancer cell spawning) appear to have less dramatic effects on bacteria
+        cell dynamics, with all curves peaking and declining in a similar fashion. However, higher values tend to sustain bacteria cell counts for longer, indicating a more prolonged presence of bacteria cells with increased cancer cell spawning.
+        For immune cells, the effect of pCancerSpawn also seems less pronounced, but higher values lead to a marginally
+        higher immune cell count, possibly due to a greater stimulus for the immune system.
+
+    pImmuneKill - Bacteria Cells and Immune Cells:
+        Increasing the pImmuneKill (probability of an immune cell killing a cancer cell) leads to a significant decrease
+        in bacteria cell counts. Higher values lead to a rapid and more substantial decline in bacteria cells, reflecting the increased effectiveness of the immune response.
+        For immune cells, higher pImmuneKill values result in an earlier and higher peak in immune cell counts, followed
+        by a plateau. This indicates that a more effective immune response rapidly controls the bacteria cell population and then maintains a consistent level of immune presence.
+
+Summary:
+
+    Cancer Cell Multiplication (pCancerMult): Higher rates of cancer cell multiplication can lead to a more aggressive
+    onset of bacteria presence but may suppress or delay the immune response.
+    Cancer Cell Spawning (pCancerSpawn): Changes in cancer cell spawning have a less substantial impact but generally
+    promote a more sustained bacteria presence and a slightly increased immune response.
+    Immune Cell Killing Probability (pImmuneKill): Higher effectiveness of the immune system in killing cancer cells
+    results in a more controlled bacteria population and a robust immune presence.
+
+These results highlight the complex interplay between cancer cell dynamics and the immune response. Modifying each
+ parameter affects the system differently, indicating potential targets for therapeutic intervention. For example,
+ increasing the effectiveness of immune cells (pImmuneKill) seems to be a potent strategy for controlling cancer cell
+ proliferation.
