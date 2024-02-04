@@ -66,5 +66,5 @@ class Visualizer:
         Starts indefinite loop of visualizer frames until matplotlib window is closed.
         """
         ani = FuncAnimation(self.fig, self.frame, frames=None, interval=1, repeat = False)
-        plt.show()
-        # ani.save("animation_plot.gif", writer='pillow')
+        # plt.show()
+        ani.save("results/visualisation_immune.gif", writer='pillow')

@@ -144,7 +144,7 @@ def plotEquilibriumAnalysis(sensitivity_results,equilibrium_range):
         ax2.legend()
         plt.tight_layout()
         filename = f"equilibrium_interaction_{param}.png"
-        plt.savefig(f"output/{filename}")
+        plt.savefig(f"data/{filename}")
         plt.show()
 
 
@@ -226,7 +226,7 @@ def parScan(maxIter:int, parms: Dict[str, List[any]], runs: int, processes: int,
         processes        (int): The amount of available processes to run in parallel.
         boxLen           (int): The length of the rectangular box for the spatial model.
         immuneFrac     (float): The amount of cells occupied by immune cells
-        filename         (str): Filename/ relative filepath from output.py for result files.
+        filename         (str): Filename/ relative filepath from data/ for result files.
 
     """
 
@@ -264,7 +264,7 @@ def paralelRun(maxIter:int, parms: Dict[str, float], runs: int, processes: int, 
         processes        (int): The amount of available processes to run in parallel.
         boxLen           (int): The length of the rectangular box for the spatial model.
         immuneFrac     (float): The amount of cells occupied by immune cells
-        filename         (str): Filename/ relative filepath from output.py for result files.
+        filename         (str): Filename/ relative filepath from data/ for result files.
     """
 
     t_init = time()
@@ -445,9 +445,9 @@ def saveResults(plot: List[Tuple[float, float, float]], filename: str, parms: Di
         plot (List[Tuple[float, float, float]]): A list of tuples containing the average occupation,
             the variance and the standard deviation for every iteration.
     """
-    os.makedirs("Output", exist_ok=True)
+    os.makedirs("data", exist_ok=True)
 
-    filepath = f"output/{filename+  f'-{str(parms.items())[10:]}'.replace(' ', '')}.csv"
+    filepath = f"data/{filename+  f'-{str(parms.items())[10:]}'.replace(' ', '')}.csv"
 
     with open(filepath, "w") as outFile:
 

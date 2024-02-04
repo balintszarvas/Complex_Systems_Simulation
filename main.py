@@ -9,7 +9,7 @@ Runs the model in a visualizer with deault setting to check whether everything r
 # Default settings
 LEN             = 200
 FRAC_IMMUNE     = 0.0060
-P_IMMUNEKILL    = 0.7
+P_IMMUNEKILL    = 1
 P_BACTERIAMULT  = 0.01
 P_BACTERIASPAWN = 0.01
 
