@@ -166,5 +166,7 @@ Does not have input parameters and has to be edited from source.
 ### tool_plot_ODE_batch.py
 Quick plotting program for `tool_ODE_batch.py` output files, for variable multiplication probability only.
 
+Does not have input parameters and has to be edited from source.
+
 ### Example Plot
 ![simple output plot](output/Batch_ODE-fitted_runs/parmPlots.png "parmPlots")
