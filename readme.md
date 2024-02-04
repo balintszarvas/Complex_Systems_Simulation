@@ -122,8 +122,8 @@ parameter.
 A list structure can also be entered, which makes the program loop through all possible combinations 
 of these parameters.
 
-#### Example output plot
-![simple output plot](output/T1.png "T1")
+#### Example data plot
+![simple data plot](data/T1.png "T1")
 
 
 
@@ -153,20 +153,20 @@ $${dB\over dt}= \gamma B^2 - \alpha BI + Spawn$$
              Example: `True`, `False`
 
 ### Example Plot
-![simple output plot](output/Batch_ODE-fitted_runs/example_0.052.png "example_0.052")
+![simple data plot](data/Batch_ODE-fitted_runs/example_0.052.png "example_0.052")
 
 
 ### tool_ODE_batch.py
 Has variable pBacteriaMult, and fixed ImmuneKill and pBacteriaSpawn parameters
-Places files in ./output/Batch_ODE-fitted_runs/
+Places files in ./data/Batch_ODE-fitted_runs/
 Creates files for individual runs and a file containing all ODE parameters as function of pBacteriaMult 
 
 Does not have input parameters and has to be edited from source.
 
 ### tool_plot_ODE_batch.py
-Quick plotting program for `tool_ODE_batch.py` output files, for variable multiplication probability only.
+Quick plotting program for `tool_ODE_batch.py` data files, for variable multiplication probability only.
 
 Does not have input parameters and has to be edited from source.
 
 ### Example Plot
-![simple output plot](output/Batch_ODE-fitted_runs/parmPlots.png "parmPlots")
+![simple data plot](data/Batch_ODE-fitted_runs/parmPlots.png "parmPlots")
