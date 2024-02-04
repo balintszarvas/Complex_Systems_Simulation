@@ -12,7 +12,7 @@ fig, axes = plt.subplots(2,2)
 XLABEL = "Bacteria Multiplication Probability"
 
 graphs = [[], [], [], [], []]
-for filename in glob.glob("output\Batch_ODE-fitted_runs\ODEPARMS_*.csv"):
+for filename in glob.glob("data\Batch_ODE-fitted_runs\ODEPARMS_*.csv"):
     with open(filename) as parmFile:
         line = parmFile.readline()
         while line:

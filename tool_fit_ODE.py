@@ -37,7 +37,7 @@ SPAWN = 3
 
 X_GUESS = np.array([0.5, 0.25, 0.4, 0.1])
 DT = 0.1
-FILENAME = "output\\temp"
+FILENAME = "data\\temp"
 
 attempts = 0
 

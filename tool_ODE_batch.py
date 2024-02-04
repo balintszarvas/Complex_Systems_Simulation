@@ -5,7 +5,7 @@ import numpy as np
 """Simple program that generates desired model plots and fits them to an ODE
 
 Takes variable pBacteriaMult, and fixed ImmuneKill and pBacteriaSpawn parameters
-Places files in ./output/Batch_ODE-fitted_runs/
+Places files in ./data/Batch_ODE-fitted_runs/
 Creates files for individual runs and a file containing all ODE parameters as function of pBacteriaMult 
 """
 
@@ -26,7 +26,7 @@ DT        = 0.1
 def main():
     """
     Takes variable pBacteriaMult, and fixed ImmuneKill and pBacteriaSpawn parameters
-    Places files in ./output/Batch_ODE-fitted_runs/
+    Places files in ./data/Batch_ODE-fitted_runs/
     Creates files for individual runs and a file containing all ODE parameters as function of pBacteriaMult 
     """
     pBacteriaMult  = [MIN + i * ((MAX - MIN) / SAMPLES) for i in range(SAMPLES)]
@@ -47,7 +47,7 @@ def main():
         print(f"{filename} DONE")
         xOuts.append(xOut)
 
-    with open("output/" + OUTDIR + "ODEPARMS_" + FILENAME, "w") as outFile:
+    with open("data/" + OUTDIR + "ODEPARMS_" + FILENAME, "w") as outFile:
         for mult, xOut in zip(pBacteriaMult, xOuts):
             outFile.write(f"{mult}, {str([item for item in xOut])[1:-1]}\n")
     return
