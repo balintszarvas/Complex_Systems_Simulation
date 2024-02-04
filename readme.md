@@ -9,6 +9,7 @@ By Anton Dolganov, Peter Hajo Groen, Bálint Szarvas and Sacha Gijsbers
 * [Model Overview](#Model-overview)
     * [Bacterial Immune Model](#bacterial-immune-model)
     * [Visualizer](#visualizer)
+* [Results and data](#results-data)
 * [Analytical Tools](#analytical-tools)
     * [tool_paralelRun.py](#tool_paralelrunpy)
     * [tool_fit_ODE.py](#tool_fit_odepy)
@@ -54,11 +55,16 @@ of the model, as well as current values for the cell occupancies.
 
 Initialize object, then call Visualizer.run()
 
-
 #### Initialization parameters
 | Parameter                 | Explaination                                          |
 |---------------------------|-------------------------------------------------------|
 | model(BacteriaImmuneModel)| The model to be visualized
+
+#### Example visualisation of the grid
+![grid visualitation](results/visualisation_heterogeneous.gif "visualisation_heterogeneous")
+
+## Results and data
+You can find the results of the research under the map results and other plots and outputs under data
 
 ## Analytical tools
 In order to obtain results, some tool programs were developed, which are explained below.
@@ -124,7 +130,6 @@ of these parameters.
 
 #### Example data plot
 ![simple data plot](data/T1.png "T1")
-
 
 
 ### tool_fit_ODE.py
