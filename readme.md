@@ -62,7 +62,7 @@ Initialize object, then call Visualizer.run()
 
 #### Example
 When the visualizer is ran, two plots are shown, with on the left the lattice visualization and on the right the cell occupancies.
-The lattice visualization shows immune cells as yellow and bacterial cells as blue, with the blue background representing the other cells of the tissue.
+The lattice visualization shows immune cells as yellow and bacterial cells as blue, with the blue background representing the other cells of the tissue (See below).
 
 ![Visual model run](results/visualisation_immune.gif "Visualization immune")
 
