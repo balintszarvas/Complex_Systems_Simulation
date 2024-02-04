@@ -1,7 +1,7 @@
 # Group 10: Modeling the resilience of the immune response against bacterial infections
 This project contains  spatial model for a bacteria-immunecell system based on a 2D stochastic automaton with an accompanying 
 
-By Anton Dolganov, Peter Hajo Groen, Bálint Szarvas and Sacha Gijsber
+By Anton Dolganov, Peter Hajo Groen, Bálint Szarvas and Sacha Gijsbers
 
 ---
 
