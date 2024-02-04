@@ -145,7 +145,7 @@ def plotEquilibriumAnalysis(sensitivity_results,equilibrium_range):
         ax2.legend()
         plt.tight_layout()
         filename = f"equilibrium_interaction_{param}.png"
-        plt.savefig(f"output/{filename}")
+        plt.savefig(f"data/{filename}")
         plt.show()
 
 
