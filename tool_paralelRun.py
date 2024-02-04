@@ -17,15 +17,15 @@ from typing import Dict, List, Tuple
 """Parallel running program for Bacteria immune model.
 Usage:
     To plot an earlier result, run the program like:
-        `python paralelRun.py p [FILEPATH] [PLOTNAME: optional]`
+        `python tools_paralelRun.py p [FILEPATH] [PLOTNAME: optional]`
             FILEPATH   - Path of the exported CSV file.
             PLOTNAME   - Title for the plotted image
         
     To run an experiment with default settings, run the program as:
-        `python paralelRun.py`
+        `python tools_paralelRun.py`
 
     To run a new experiment, run the program like:
-        `python paralelRun.py [RUNS: int] [ITERATIONS: int] [PROCESSES: int] [KWARGS]
+        `python tools_paralelRun.py [RUNS: int] [ITERATIONS: int] [PROCESSES: int] [KWARGS]
             RUNS       - The amount of runs to take average of
             ITERATIONS - The maximum amount of iterations for a single run
             PROCESSES  - The amount of parallel processes to run
@@ -91,8 +91,26 @@ PARMS = { # Maybe rework into generator function
         }
 
 
-def parScan(maxIter:int, parms: Dict[str, any], runs: int, processes: int, boxLen: int, immuneFrac: float, filename: str):
-    """Loop through possible parameters"""
+RUN_SINGLE_PARM = 0
+PLOT = 1
+PARAMETER_SCAN = 2
+
+
+def parScan(maxIter:int, parms: Dict[str, List[any]], runs: int, processes: int, boxLen: int, immuneFrac: float, 
+            filename: str) -> Tuple[List[Dict[str, any]], List[List[Tuple[float, float, float, float, float, float]]]]:
+    """
+    Loop through possible parameter combinations and perform paralell runs of them.
+
+    Args:
+        maxIter          (int): The maximum amount of iterations per run.
+        parms (Dict[str, any]): Dict of list for all kwargs to be scanned.
+        runs             (int): The amountof runs per parameter combination to take average of.
+        processes        (int): The amount of available processes to run in parallel.
+        boxLen           (int): The length of the rectangular box for the spatial model.
+        immuneFrac     (float): The amount of cells occupied by immune cells
+        filename         (str): Filename/ relative filepath from output.py for result files.
+    
+    """
 
     for key, value in parms.items():
         if not isinstance(value, list):
@@ -119,10 +137,16 @@ def paralelRun(maxIter:int, parms: Dict[str, float], runs: int, processes: int, 
     Parralellized data collection function for BacteriaImmuneModel
 
     Measures the occupancy of immune cells as defined by nImmune / boxLength**2 per iteration for a
-    set amount of runs. Average, variance and standard deviation are calculated from this and saved
-    to ./output/temp.CSV.
+    set amount of runs. Average, variance and standard deviation are calculated from this and returned.
 
-    Average and standard deviation are plotted in matplotlib and displayed to the user.
+    Args:
+        maxIter          (int): The maximum amount of iterations per run.
+        parms (Dict[str, any]): Dict of kwargs for BacteriaImmuneModel.
+        runs             (int): The amountof runs per parameter combination to take average of.
+        processes        (int): The amount of available processes to run in parallel.
+        boxLen           (int): The length of the rectangular box for the spatial model.
+        immuneFrac     (float): The amount of cells occupied by immune cells
+        filename         (str): Filename/ relative filepath from output.py for result files.
     """
     
     t_init = time()
@@ -141,7 +165,7 @@ def paralelRun(maxIter:int, parms: Dict[str, float], runs: int, processes: int, 
     return output
 
 
-def runOnce(maxIter: int, parms: Dict[str, float], boxLen: int, immuneFrac: float) -> np.ndarray[float]:
+def runOnce(maxIter: int, parms: Dict[str, float], boxLen: int, immuneFrac: float) -> "np.ndarray[float]":
     """
     Runs the model once for the given parameter.
     
@@ -150,13 +174,13 @@ def runOnce(maxIter: int, parms: Dict[str, float], boxLen: int, immuneFrac: floa
         INTIAL_IMMUNE (float): Initial amount of immune cells.
         parms (Dict[str, float]): Model parameters (pBacteriaMult, pImmuneKill, pBacteriaSpawn).
 
-    Returns (np.ndarray): A 2 x maxIter array with immune cell data in the left collumn and bacterial
+    Returns (np.ndarray[float]): A 2 x maxIter array with immune cell data in the left collumn and bacterial
         cell data in the right.
     """
     parms = copy(parms)
     model = bacteriaImmuneModel(boxLen, boxLen, **parms)
     model.seedImmune(round(boxLen**2 * immuneFrac))
-    vals: np.ndarray[float] = np.ndarray((2,maxIter), float)
+    vals: "np.ndarray[float]" = np.ndarray((2,maxIter), float)
     for iter in range(maxIter):
         model.timestep()
         vals[0, iter] = model.get_nImmuneCells() / boxLen**2
@@ -164,16 +188,17 @@ def runOnce(maxIter: int, parms: Dict[str, float], boxLen: int, immuneFrac: floa
     return vals
 
 
-def calculate_statistics(values: np.ndarray) -> List[Tuple[float, float, float, float, float, float]]:
+def calculate_statistics(values: "List[np.ndarray[float]]") -> List[Tuple[float, float, float, float, float, float]]:
     """
     Calculates statistical measures for a given list of values.
 
     Args:
-        values (List[float]): List of numerical values.
+        values (List[np.ndarray[float]): List of arrays containig the immunecell and bacterial cell 
+        data for every run of a pool.
 
     Returns:
-        Tuple[float, float, float]: A tuple containing the average, variance, and standard deviation 
-        of the input values.
+        List[Tuple[float, float, float, float, float, float]]: A tuple containing the average, variance, 
+        and standard deviation of the immune cells [:3] and bacteria cells [3:] per iteration.
     """
     # Split List of Per run tuples of per cell tuples up into List of Per cell Lists of per run lists 
     immune   = [point[0,:] for point in values]
@@ -196,16 +221,13 @@ def calculate_statistics(values: np.ndarray) -> List[Tuple[float, float, float, 
     return plots
 
 
-def multiPlot(results: List[Tuple[float, float, float, float]], plotTitle= None) -> None:
+def multiPlot(results: List[Tuple[float, float, float, float, float, float]], plotTitle= None) -> None:
     """
     Plots the results of model simulations.
 
     Args:
-        plot (List[Dict[str, List[Tuple[float, float, float]]]]): The calculated statistics for immune 
-        and bacteria cell occupancy.
-
-    Returns:
-        None: This function does not return anything but plots the results.
+        results: List[Tuple[float, float, float, float, float, float]]: A tuple containing the average, 
+        variance, and standard deviation of the immune cells [:3] and bacteria cells [3:] per iteration.
     """
     fig, ax = plt.subplots()
     assert isinstance(ax, plt.Axes)
@@ -214,7 +236,7 @@ def multiPlot(results: List[Tuple[float, float, float, float]], plotTitle= None)
     averagesI = [avgI    for avgI, varI, stdDevI, avgB, varB, stdDevB in results]
     std_devsI = [stdDevI for avgI, varI, stdDevI, avgB, varB, stdDevB in results]
     averagesB = [avgB    for avgI, varI, stdDevI, avgB, varB, stdDevB in results]
-    std_devsB = [stdDevB    for avgI, varI, stdDevI, avgB, varB, stdDevB in results]
+    std_devsB = [stdDevB for avgI, varI, stdDevI, avgB, varB, stdDevB in results]
 
     for averages, std_devs, label in [(averagesI, std_devsI, "Immune Cells"), (averagesB, std_devsB, "Bacteria")]:
         ax.plot(iters, averages, label=f"Average {label}")
@@ -287,66 +309,58 @@ def saveResults(plot: List[Tuple[float, float, float]], filename: str, parms: Di
     return filepath
 
 def readData(filename: str) -> List[Tuple[float, float, float, float, float]]:
-        """
-        Reads result datafile and returns it in a format usable by multiplot.
-        
-        Args:
-            filename (str): The filename of the resultfile
-        
-        Returns (List[Tuple[float, float, float]]): A list of tuples containing the average occupation,
-            the variance and the standard deviation for every iteration.
-
-        """
-        output = []
-
-        if not ".csv" in filename:
-            filename = f"{filename}.csv"
-
-        with open(filename, newline=None) as resultFile:
-            line = resultFile.readline().replace("'", '"')
-            parms = json.loads(line)
-
-            while line != "\n":
-                line = resultFile.readline()
-            resultFile.readline()
-            line = resultFile.readline()
-
-            while line != None and line != "\n":
-                splitline = line.split(',')
-                output.append(tuple([float(item) for item in splitline]))
-                line = resultFile.readline()
-        
-        return output
-
-if __name__ == "__main__":
-    from sys import argv
-
-    RUN_SINGLE_PARM = 0
-    PLOT = 1
-    PARAMETER_SCAN = 2
-
-    def main(args: List[str]):
-        """
-        Main function, see file docstring
-        
-        Takes argv as input.
-        """
-        mode, maxIter, parms, runs, processes, boxLen, immuneFrac, filename, plotTitle, noPlot = parseArgv(args)
-        if mode == PLOT:
-            multiPlot(readData(filename), plotTitle)
-            return
-        elif mode == PARAMETER_SCAN:
-            output = parScan(maxIter, parms, runs, processes, boxLen, immuneFrac, filename)
-            if not noPlot:
-                multiMultiplot(*output)
-            return
-        output = paralelRun(maxIter, parms, runs, processes, boxLen, immuneFrac)
-        saveResults(output, filename, parms, runs, maxIter)
-        if not noPlot:
-            multiPlot(output)
-        return output
+    """
+    Reads result datafile and returns it in a format usable by multiplot.
     
-    def parseArgv(args: List[str]):
+    Args:
+        filename (str): The filename of the resultfile
+    
+    Returns (List[Tuple[float, float, float]]): A list of tuples containing the average occupation,
+        the variance and the standard deviation for every iteration.
+    """
+    output = []
+
+    if not ".csv" in filename:
+        filename = f"{filename}.csv"
+
+    with open(filename, newline=None) as resultFile:
+        line = resultFile.readline().replace("'", '"')
+        parms = json.loads(line)
+
+        while line != "\n":
+            line = resultFile.readline()
+        resultFile.readline()
+        line = resultFile.readline()
+
+        while line != None and line != "\n":
+            splitline = line.split(',')
+            output.append(tuple([float(item) for item in splitline]))
+            line = resultFile.readline()
+    
+    return output
+
+def main(args: List[str]):
+    """
+    Main function, see file docstring
+    
+    Takes a list of arguments as input.
+    """
+    mode, maxIter, parms, runs, processes, boxLen, immuneFrac, filename, plotTitle, noPlot = parseArgv(args)
+    if mode == PLOT:
+        multiPlot(readData(filename), plotTitle)
+        return
+    elif mode == PARAMETER_SCAN:
+        output = parScan(maxIter, parms, runs, processes, boxLen, immuneFrac, filename)
+        if not noPlot:
+            multiMultiplot(*output)
+        return
+    output = paralelRun(maxIter, parms, runs, processes, boxLen, immuneFrac)
+    saveResults(output, filename, parms, runs, maxIter)
+    if not noPlot:
+        multiPlot(output)
+    return output
+
+def parseArgv(args: List[str]):
         """
         Argv parser.
 
@@ -411,5 +425,8 @@ if __name__ == "__main__":
                         else:
                             parms[key] = float(val)
         return mode, maxIter, parms, runs, processes, boxLen, immuneFrac, filename, plotTitle, noPlot
+
+if __name__ == "__main__":
+    from sys import argv
 
     main(argv)

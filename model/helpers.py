@@ -1,6 +1,7 @@
-from numpy.random import randint, random, choice
+from numpy.random import randint
 from typing import List, Tuple
 
+"""Helper function for bacteriaImmune model"""
 
 def randomTuple(options: List[Tuple[int, int]]) -> Tuple[int, int]:
     """
@@ -14,5 +15,9 @@ def randomTuple(options: List[Tuple[int, int]]) -> Tuple[int, int]:
 
     return options[choiceID]
 
-def mooreMaxSize(radius: int, includeSelf = False) -> int:
-    return (2 * radius + 1)**2 - int(includeSelf)
+def mooreMaxSize(radius: int, dontIncludeSelf = False) -> int:
+    """
+    Returns the amount of tiles in a moore neighborhood of a given radius, either inclusive or not inclusive of the
+    center tile.
+    """
+    return (2 * radius + 1)**2 - int(dontIncludeSelf)

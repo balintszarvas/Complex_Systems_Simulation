@@ -7,7 +7,6 @@ import numpy as np
 Takes variable pBacteriaMult, and fixed ImmuneKill and pBacteriaSpawn parameters
 Places files in ./output/Batch_ODE-fitted_runs/
 Creates files for individual runs and a file containing all ODE parameters as function of pBacteriaMult 
-
 """
 
 SAMPLES = 20
@@ -25,6 +24,11 @@ DT        = 0.1
 
 
 def main():
+    """
+    Takes variable pBacteriaMult, and fixed ImmuneKill and pBacteriaSpawn parameters
+    Places files in ./output/Batch_ODE-fitted_runs/
+    Creates files for individual runs and a file containing all ODE parameters as function of pBacteriaMult 
+    """
     pBacteriaMult  = [MIN + i * ((MAX - MIN) / SAMPLES) for i in range(SAMPLES)]
     pImmuneKill  = 1.0
     pBacteriaSpawn = 0.01

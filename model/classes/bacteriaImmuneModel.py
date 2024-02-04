@@ -18,27 +18,38 @@ class bacteriaImmuneModel:
         dim        (Tuple[int, int]): Length and width of the model
 
         bacteriaLattice (ndarray[int]): Lattice containing the bacteria cells of the system
-        immuneLattice (ndarray[int]): Lattice containing the immune cells of the system
+        immuneLattice   (ndarray[int]): Lattice containing the immune cells of the system
 
-        pImmuneKill          (float): Probability that an immune cell kills a bacteria cell
+        pImmuneKill            (float): Probability that an immune cell kills a bacteria cell
         pbacteriaMult          (float): Probability that a bacteria cell multiplies during a timestep
 
-        bacteriaCells    (Set[Tuple[int, int]]): Set of all cell coordinates containing bacteria cells.
-                                               used for scheduling
-        immuneCells    (Set[Tuple[int, int]]): List of all cell coordinates containing immune cells. bacteriaGrowthp
-                                               used for scheduling
+        bacteriaCells    (Set[Tuple[int, int]]): Set of all cell coordinates containing bacteria cells. 
+                                                 Used for scheduling.
+        immuneCells      (Set[Tuple[int, int]]): List of all cell coordinates containing immune cells.  
+                                                 Used for scheduling.
         bacteriaCells_t1 (Set[Tuple[int, int]]): Set of all cell coordinates containing bacteria cells for next timestep
-        immuneCells_t1 (Set[Tuple[int, int]]): List of all cell coordinates containing immune cells fopr next timestep
+        immuneCells_t1   (Set[Tuple[int, int]]): List of all cell coordinates containing immune cells fopr next timestep
+
+    Quick Implementation Guide
+    If one wants to implement the model into their own project as is, the following steps should be taken.
+        1. Initialize a new `BacteriaImmuneModel` object.
+        2. (optional) Seed the model with an initial population of bacterial cells for the desired amound 
+        of cells nCells using `BacteriaImmuneModel.seedBacteria(nCells: int)`
+        3. Seed the model with an initial population of immune cells for the desired amount of cells 
+           nCells using `BacteriaImmuneModel.seedImmune(nCells: int)`
+        4. Call `BacteriaImmuneModel.timestep()` to update the lattice. The current populations of immunecells 
+           and bacterial cells can be obtained using `BacteriaImmuneModel.get_nImmuneCells()` and 
+           `BacteriaImmuneModel.get_nbacteriaCells()` respectively
     """
     def __init__(self, length: int, width: int, pImmuneKill = 1.0, pbacteriaMult = 0.05, pbacteriaSpawn = 0.01) -> None:
         """
         initializer function
 
         Args:
-            length          (int): Length of the lattice.
-            width           (int): Width of the lattice.
-            pImmuneKill   (float): Chance an immune cell kills a bacteria cell.
-            pbacteriaMult   (float): Chance a bacteria cell multiplies every timestep.
+            length           (int): Length of the lattice.
+            width            (int): Width of the lattice.
+            pImmuneKill    (float): Chance an immune cell kills a bacteria cell.
+            pbacteriaMult  (float): Chance a bacteria cell multiplies every timestep.
             pbacteriaSpawn (float): Chance a normal cell becomes bacteriaous per timestep.
         """
         self.time = 0

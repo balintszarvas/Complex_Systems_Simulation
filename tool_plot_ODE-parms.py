@@ -6,8 +6,6 @@ from typing import List
 
 """ 
 Quick plotting program for ODE_batch output files, for variable multiplication probability only.
-
-
 """
 
 fig, axes = plt.subplots(2,2) 
