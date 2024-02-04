@@ -67,7 +67,7 @@ The lattice visualization shows immune cells as yellow and bacterial cells as bl
 ![Visual model run](results/visualisation_geterogeneous.gif "Visualization immune cells and bacterial cells in balance")
 
 ## Results and data
-You can find the results of the research under the map results and other plots and outputs under data
+You can find the results of the research under the folder results and other plots and outputs under data
 
 ## Analytical tools
 In order to obtain results, some tool programs were developed, which are explained below.
