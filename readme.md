@@ -64,10 +64,7 @@ Initialize object, then call Visualizer.run()
 When the visualizer is ran, two plots are shown, with on the left the lattice visualization and on the right the cell occupancies.
 The lattice visualization shows immune cells as yellow and bacterial cells as blue, with the blue background representing the other cells of the tissue (See below).
 
-![Visual model run](results/visualisation_immune.gif "Visualization immune")
-
-#### Example visualisation of the grid
-![grid visualitation](results/visualisation_heterogeneous.gif "visualisation_heterogeneous")
+![Visual model run](results/visualisation_geterogeneous.gif "Visualization immune cells and bacterial cells in balance")
 
 ## Results and data
 You can find the results of the research under the map results and other plots and outputs under data
