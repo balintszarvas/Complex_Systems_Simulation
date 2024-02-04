@@ -169,4 +169,4 @@ Quick plotting program for `tool_ODE_batch.py` data files, for variable multipli
 Does not have input parameters and has to be edited from source.
 
 ### Example Plot
-![simple data plot](data/Batch_ODE-fitted_runs/parmPlots.png "parmPlots")
+![simple data plot](results/parmPlots.png "parmPlots")
