@@ -8,6 +8,8 @@ import json
 import multiprocessing
 from multiprocessing import Pool
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+import matplotlib.cm as cm
 import numpy as np
 
 from model.classes.bacteriaImmuneModel import bacteriaImmuneModel
@@ -102,9 +104,6 @@ RUN_SINGLE_PARM = 0
 PLOT = 1
 PARAMETER_SCAN = 2
 
-import numpy as np
-import matplotlib.pyplot as plt
-from multiprocessing import Pool
 
 def plotEquilibriumAnalysis(sensitivity_results,equilibrium_range):
     """
@@ -399,6 +398,40 @@ def multiMultiplot(parms: List[Dict[str, float]], results: List[List[Tuple[float
         ax.legend()
 
     plt.tight_layout()
+    plt.show()
+
+def plotPhaseSpace(results, param_values, param_name, cmap='viridis'):
+    """
+    Plots a phase space diagram of immune cells vs. bacteria cells with color gradients based on a parameter value.
+
+    Args:
+        results (List[Dict]): List of result dictionaries, each containing 'immune' and 'bacteria' lists.
+        param_values (float or List[float]): Single parameter value or list of parameter values corresponding to each result set in `results`.
+        param_name (str): Name of the parameter that varies between simulations.
+        cmap (str): Name of the matplotlib colormap to use for the gradient.
+    """
+    if not isinstance(param_values, (list, np.ndarray)):
+        param_values = [param_values]
+    
+    norm = mcolors.Normalize(vmin=min(param_values), vmax=max(param_values))
+    scalar_map = cm.ScalarMappable(norm=norm, cmap=cmap)
+
+    plt.figure(figsize=(10, 6))
+    
+    for result, param_value in zip(results, param_values):
+        immune_averages = [avgI for avgI, _, _, _, _, _ in result]
+        bacteria_averages = [avgB for _, _, _, avgB, _, _ in result]
+        color = scalar_map.to_rgba(param_value)
+        
+        plt.plot(immune_averages, bacteria_averages, '-o', markersize=5, lw=2, color=color, 
+                 label=f'{param_name}: {param_value}')
+    
+    plt.title("Phase Plot of Immune Cells vs. Bacteria Cells")
+    plt.xlabel("Average Immune Cell Fraction")
+    plt.ylabel("Average Bacteria Cell Fraction")
+    plt.colorbar(scalar_map, label=param_name)
+    plt.legend()
+    plt.grid(True)
     plt.show()
 
 
