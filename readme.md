@@ -58,7 +58,13 @@ Initialize object, then call Visualizer.run()
 #### Initialization parameters
 | Parameter                 | Explaination                                          |
 |---------------------------|-------------------------------------------------------|
-| model(BacteriaImmuneModel)| The model to be visualized
+| model(BacteriaImmuneModel)| The model to be visualized                            |
+
+#### Example
+When the visualizer is ran, two plots are shown, with on the left the lattice visualization and on the right the cell occupancies.
+The lattice visualization shows immune cells as yellow and bacterial cells as blue, with the blue background representing the other cells of the tissue.
+
+![Visual model run](results/visualisation_immune.gif "Visualization immune")
 
 ## Analytical tools
 In order to obtain results, some tool programs were developed, which are explained below.
