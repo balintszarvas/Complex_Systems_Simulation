@@ -21,11 +21,11 @@ class bacteriaImmuneModel:
         immuneLattice   (ndarray[int]): Lattice containing the immune cells of the system
 
         pImmuneKill            (float): Probability that an immune cell kills a bacteria cell
-        pbacteriaMult          (float): Probability that a bacteria cell multiplies during a timestep
+        pBacteriaMult          (float): Probability that a bacteria cell multiplies during a timestep
 
-        bacteriaCells    (Set[Tuple[int, int]]): Set of all cell coordinates containing bacteria cells. 
+        bacteriaCells    (Set[Tuple[int, int]]): Set of all cell coordinates containing bacteria cells.
                                                  Used for scheduling.
-        immuneCells      (Set[Tuple[int, int]]): List of all cell coordinates containing immune cells.  
+        immuneCells      (Set[Tuple[int, int]]): List of all cell coordinates containing immune cells.
                                                  Used for scheduling.
         bacteriaCells_t1 (Set[Tuple[int, int]]): Set of all cell coordinates containing bacteria cells for next timestep
         immuneCells_t1   (Set[Tuple[int, int]]): List of all cell coordinates containing immune cells fopr next timestep
@@ -33,15 +33,15 @@ class bacteriaImmuneModel:
     Quick Implementation Guide
     If one wants to implement the model into their own project as is, the following steps should be taken.
         1. Initialize a new `BacteriaImmuneModel` object.
-        2. (optional) Seed the model with an initial population of bacterial cells for the desired amound 
+        2. (optional) Seed the model with an initial population of bacterial cells for the desired amound
         of cells nCells using `BacteriaImmuneModel.seedBacteria(nCells: int)`
-        3. Seed the model with an initial population of immune cells for the desired amount of cells 
+        3. Seed the model with an initial population of immune cells for the desired amount of cells
            nCells using `BacteriaImmuneModel.seedImmune(nCells: int)`
-        4. Call `BacteriaImmuneModel.timestep()` to update the lattice. The current populations of immunecells 
-           and bacterial cells can be obtained using `BacteriaImmuneModel.get_nImmuneCells()` and 
+        4. Call `BacteriaImmuneModel.timestep()` to update the lattice. The current populations of immunecells
+           and bacterial cells can be obtained using `BacteriaImmuneModel.get_nImmuneCells()` and
            `BacteriaImmuneModel.get_nbacteriaCells()` respectively
     """
-    def __init__(self, length: int, width: int, pImmuneKill = 1.0, pbacteriaMult = 0.05, pbacteriaSpawn = 0.01) -> None:
+    def __init__(self, length: int, width: int, pImmuneKill = 1.0, pBacteriaMult = 0.05, pBacteriaSpawn = 0.01) -> None:
         """
         initializer function
 
@@ -49,8 +49,8 @@ class bacteriaImmuneModel:
             length           (int): Length of the lattice.
             width            (int): Width of the lattice.
             pImmuneKill    (float): Chance an immune cell kills a bacteria cell.
-            pbacteriaMult  (float): Chance a bacteria cell multiplies every timestep.
-            pbacteriaSpawn (float): Chance a normal cell becomes bacteriaous per timestep.
+            pBacteriaMult  (float): Chance a bacteria cell multiplies every timestep.
+            pBacteriaSpawn (float): Chance a normal cell becomes bacteriaous per timestep.
         """
         self.time = 0
 
@@ -60,8 +60,8 @@ class bacteriaImmuneModel:
         self.immuneLattice = np.zeros((length, width), dtype=int)
 
         self.pImmuneKill   = pImmuneKill
-        self.pbacteriaMult   = pbacteriaMult
-        self.pbacteriaSpawn = pbacteriaSpawn
+        self.pBacteriaMult   = pBacteriaMult
+        self.pBacteriaSpawn = pBacteriaSpawn
 
         self.bacteriaCells   :  Set[Tuple[int, int]] = set()
         self.immuneCells   :  Set[Tuple[int, int]] = set()
@@ -161,7 +161,7 @@ class bacteriaImmuneModel:
         """
         self._addbacteria(cell)
 
-        if random() > self.pbacteriaMult:
+        if random() > self.pBacteriaMult:
             # Stop if cell will not multiply
             return 0
 
@@ -299,7 +299,7 @@ class bacteriaImmuneModel:
         for cell in self.immuneCells:
             self.propagateTKiller(cell)
 
-        if random() < self.pbacteriaSpawn:
+        if random() < self.pBacteriaSpawn:
             self.seedbacteria(1)
 
         self.bacteriaCells = self.bacteriaCells_t1
